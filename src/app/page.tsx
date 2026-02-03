@@ -255,7 +255,7 @@ export default function Home() {
       ['臨床的印象', result.soap.assessment?.clinicalImpression || ''],
       ['治療方針', result.soap.plan?.treatment || ''],
       ['処方薬', result.soap.plan?.medications?.map(m => {
-        const parts = [m.name, m.dosage, m.frequency, m.duration].filter(p => p);
+        const parts = [m?.name, m?.dosage, m?.frequency, m?.duration].filter(p => p);
         return parts.join(' ');
       }).join('; ') || ''],
       ['検査', result.soap.plan?.tests?.join(', ') || ''],
@@ -324,6 +324,14 @@ export default function Home() {
         if (!imported.soap.subjective || !imported.soap.objective || 
             !imported.soap.assessment || !imported.soap.plan) {
           throw new Error('必須のSOAPセクション（S/O/A/P）が不足しています。');
+        }
+
+        // Validate that SOAP sections have the correct structure
+        if (typeof imported.soap.subjective !== 'object' || 
+            typeof imported.soap.objective !== 'object' ||
+            typeof imported.soap.assessment !== 'object' ||
+            typeof imported.soap.plan !== 'object') {
+          throw new Error('SOAPセクションの構造が正しくありません。');
         }
 
         setResult(imported as SoapNote);
