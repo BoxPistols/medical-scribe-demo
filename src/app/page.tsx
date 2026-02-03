@@ -221,7 +221,7 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const timestamp = new Date().toISOString().split('.')[0].replace(/[:-]/g, '-');
     link.download = `soap_note_${timestamp}.json`;
     link.click();
     URL.revokeObjectURL(url);
@@ -255,7 +255,7 @@ export default function Home() {
       ['臨床的印象', result.soap.assessment?.clinicalImpression || ''],
       ['治療方針', result.soap.plan?.treatment || ''],
       ['処方薬', result.soap.plan?.medications?.map(m => {
-        const parts = [m?.name, m?.dosage, m?.frequency, m?.duration].filter(p => p);
+        const parts = [m?.name, m?.dosage, m?.frequency, m?.duration].filter(p => p !== undefined && p !== null && p !== '');
         return parts.join(' ');
       }).join('; ') || ''],
       ['検査', result.soap.plan?.tests?.join(', ') || ''],
@@ -272,7 +272,7 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const timestamp = new Date().toISOString().split('.')[0].replace(/[:-]/g, '-');
     link.download = `soap_note_${timestamp}.csv`;
     link.click();
     URL.revokeObjectURL(url);
