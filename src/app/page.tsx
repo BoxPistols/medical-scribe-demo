@@ -3,6 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import type { SoapNote } from './api/analyze/types';
 
+// Constants
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+// Helper functions
+const getTimestampForFilename = (): string => {
+  return new Date().toISOString().split('.')[0].replace(/[:-]/g, '-');
+};
+
 // Web Speech API type definitions
 interface SpeechRecognitionEvent {
   resultIndex: number;
@@ -221,8 +229,7 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const timestamp = new Date().toISOString().split('.')[0].replace(/[:-]/g, '-');
-    link.download = `soap_note_${timestamp}.json`;
+    link.download = `soap_note_${getTimestampForFilename()}.json`;
     link.click();
     URL.revokeObjectURL(url);
     setShowExportMenu(false);
@@ -272,8 +279,7 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const timestamp = new Date().toISOString().split('.')[0].replace(/[:-]/g, '-');
-    link.download = `soap_note_${timestamp}.csv`;
+    link.download = `soap_note_${getTimestampForFilename()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     setShowExportMenu(false);
@@ -287,9 +293,8 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // File size limit: 10MB
-    const MAX_FILE_SIZE = 10 * 1024 * 1024;
-    if (file.size > MAX_FILE_SIZE) {
+    // File size limit
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       setError('ファイルサイズが大きすぎます。10MB以下のファイルを選択してください。');
       return;
     }
@@ -344,7 +349,9 @@ export default function Home() {
       } catch (err) {
         console.error('Import error:', err);
         const errorMessage = err instanceof Error ? err.message : 'ファイルの読み込みに失敗しました。';
-        if (errorMessage.includes('JSON')) {
+        
+        // Handle JSON syntax errors specifically
+        if (err instanceof SyntaxError) {
           setError('ファイルの読み込みに失敗しました。正しいJSON形式のSOAPカルテファイルか確認してください。');
         } else {
           setError(errorMessage);
