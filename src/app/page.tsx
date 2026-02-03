@@ -8,7 +8,12 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 // Helper functions
 const getTimestampForFilename = (): string => {
-  return new Date().toISOString().split('.')[0].replace(/[:-]/g, '-');
+  // Returns format: 2026-02-03T14-30-45
+  return new Date().toISOString().split('.')[0].replace(/:/g, '-');
+};
+
+const escapeCsvCell = (value: unknown): string => {
+  return `"${String(value).replace(/"/g, '""')}"`;
 };
 
 // Web Speech API type definitions
@@ -272,7 +277,7 @@ export default function Home() {
     ];
 
     const csvContent = csvRows.map(row => 
-      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      row.map(escapeCsvCell).join(',')
     ).join('\n');
     
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
