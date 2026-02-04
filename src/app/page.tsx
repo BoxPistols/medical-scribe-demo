@@ -1411,12 +1411,12 @@ export default function Home() {
                   style={{ pointerEvents: isTransitioning ? 'none' : 'auto' }}
                 >
                   {/* Visual line */}
-                  <div className="w-1 h-full bg-gray-200 dark:bg-gray-600 group-hover:bg-teal-400 dark:group-hover:bg-teal-500 transition-colors duration-200">
+                  <div className="w-1 h-full bg-gray-300 dark:bg-gray-600 group-hover:bg-teal-400 dark:group-hover:bg-teal-500 transition-colors duration-200">
                     {/* Grip dots in center */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 pointer-events-none">
                       <div className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 group-hover:bg-teal-600 dark:group-hover:bg-teal-400" />
-                      <div className="w-1 h-1 rounded-full bg-gray-400 group-hover:bg-teal-600" />
-                      <div className="w-1 h-1 rounded-full bg-gray-400 group-hover:bg-teal-600" />
+                      <div className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 group-hover:bg-teal-600 dark:group-hover:bg-teal-400" />
+                      <div className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 group-hover:bg-teal-600 dark:group-hover:bg-teal-400" />
                     </div>
                   </div>
                 </div>

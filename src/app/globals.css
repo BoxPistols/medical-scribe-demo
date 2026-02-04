@@ -1023,15 +1023,15 @@ body::after {
 .resize-handle-line {
   width: 0.125rem;
   height: 100%;
-  background: var(--text-muted);
+  background: #e5e7eb;
   transition: all 0.3s ease;
   border-radius: 9999px;
-  opacity: 0.15;
+  opacity: 0.8;
 }
 
 [data-theme="dark"] .resize-handle-line {
-  opacity: 0.06 !important;
-  background: #334155 !important;
+  opacity: 0.4 !important;
+  background: #475569 !important;
 }
 
 .group:hover .resize-handle-line {
@@ -1050,14 +1050,14 @@ body::after {
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 9999px;
-  background: var(--text-muted);
+  background: #9ca3af;
   transition: all 0.3s ease;
-  opacity: 0.2;
+  opacity: 0.6;
 }
 
 [data-theme="dark"] .resize-handle-dot {
-  opacity: 0.08 !important;
-  background: #334155 !important;
+  opacity: 0.3 !important;
+  background: #64748b !important;
 }
 
 .group:hover .resize-handle-dot {
