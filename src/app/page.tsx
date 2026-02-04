@@ -2107,6 +2107,9 @@ export default function Home() {
                               <SpeakerWaveIcon className="w-3.5 h-3.5" aria-hidden="true" />
                             )}
                             <span className="text-xs">Voice</span>
+                            <span className="text-[10px] opacity-70 ml-0.5">
+                              [{formatShortcut(shortcuts.toggleSpeech, true)}]
+                            </span>
                           </button>
                           <button
                             onClick={() => setShowSpeechSettings(!showSpeechSettings)}
