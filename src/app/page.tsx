@@ -818,21 +818,24 @@ export default function Home() {
               <div className="panel h-full flex flex-col lg:ml-0">
                 <div className="panel-header">
                   <div className="flex items-center justify-between">
-                    {/* Mobile back button */}
+                    {/* Mobile layout */}
                     {!isLargeScreen ? (
-                      <>
-                        <button
-                          onClick={() => setActivePanel('transcript')}
-                          className="btn btn-secondary py-1 px-3 text-xs"
-                          aria-label="会話テキストに戻る"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-                          </svg>
-                          会話テキスト
-                        </button>
-                        <h2 className="panel-title text-sm">SOAPカルテ</h2>
-                        <div className="flex items-center gap-1">
+                      <div className="w-full space-y-2">
+                        {/* 1段目: 戻るボタンと見出し */}
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => setActivePanel('transcript')}
+                            className="btn btn-secondary py-1 px-2 text-xs"
+                            aria-label="会話テキストに戻る"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                            </svg>
+                          </button>
+                          <h2 className="panel-title text-sm whitespace-nowrap">カルテ</h2>
+                        </div>
+                        {/* 2段目: アクションボタン群 */}
+                        <div className="flex items-center justify-end gap-1">
                           {/* Import button */}
                           <button
                             onClick={handleImportClick}
@@ -912,7 +915,7 @@ export default function Home() {
                             </svg>
                           </button>
                         </div>
-                      </>
+                      </div>
                     ) : (
                       <div className="w-full space-y-3">
                         {/* 上段: 見出し */}
