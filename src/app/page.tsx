@@ -1487,9 +1487,9 @@ export default function Home() {
                         </button>
                         <span className="text-theme-tertiary">
                           {useModifiers ? (
-                            <>テキスト入力中も <span className="font-mono bg-theme-highlight px-1 rounded">{formatShortcut(shortcuts.toggleRecording, true)}</span> 等で操作可</>
+                            <>入力中もショートカット有効</>
                           ) : (
-                            <>単キー <span className="font-mono bg-theme-highlight px-1 rounded">{formatShortcut(shortcuts.toggleRecording, true)}</span> (入力中は無効)</>
+                            <>入力中はショートカット無効</>
                           )}
                         </span>
                       </div>
