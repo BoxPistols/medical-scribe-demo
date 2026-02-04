@@ -1818,16 +1818,19 @@ export default function Home() {
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="loading-spinner animate-spin" style={{ width: '1.5rem', height: '1.5rem', borderWidth: '2px' }} />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                           {isStreaming ? 'リアルタイム生成中...' : '解析準備中...'}
                         </span>
-                        <span className="text-xs text-gray-500">GPT-4o-mini</span>
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>GPT-4o-mini</span>
                       </div>
                       {isStreaming && streamingText && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                          <pre className="text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-all max-h-96 overflow-y-auto">
+                        <div className="rounded-lg p-4 border" style={{
+                          backgroundColor: 'var(--bg-tertiary)',
+                          borderColor: 'var(--border-primary)'
+                        }}>
+                          <pre className="text-xs font-mono whitespace-pre-wrap break-all max-h-96 overflow-y-auto" style={{ color: 'var(--text-secondary)' }}>
                             {streamingText}
-                            <span className="inline-block w-2 h-4 bg-teal-500 animate-pulse ml-0.5" />
+                            <span className="inline-block w-2 h-4 animate-pulse ml-0.5" style={{ backgroundColor: 'var(--accent-primary)' }} />
                           </pre>
                         </div>
                       )}
