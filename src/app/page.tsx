@@ -2,6 +2,39 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { SoapNote } from './api/analyze/types';
+import {
+  MicrophoneIcon,
+  SparklesIcon,
+  SpeakerWaveIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  DocumentDuplicateIcon,
+  PlayIcon,
+  PauseIcon,
+  StopIcon,
+  Cog6ToothIcon,
+  QuestionMarkCircleIcon,
+  XMarkIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ChevronDownIcon,
+  DocumentTextIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  TrashIcon,
+  ClipboardDocumentIcon,
+  UserCircleIcon,
+  PuzzlePieceIcon,
+  Bars3Icon,
+  SunIcon,
+  MoonIcon,
+  ComputerDesktopIcon,
+  DocumentIcon,
+  DocumentChartBarIcon,
+} from '@heroicons/react/24/outline';
+import { StopIcon as StopIconSolid } from '@heroicons/react/24/solid';
 
 // Constants
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
@@ -84,12 +117,73 @@ export default function Home() {
   // Help modal state
   const [showHelp, setShowHelp] = useState(false);
 
+  // Theme and settings state
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [showSettings, setShowSettings] = useState(false);
+
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const speechCurrentIndexRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Theme management - Load from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('medical-scribe-theme') as 'light' | 'dark' | 'system' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  // Theme management - Apply theme
+  useEffect(() => {
+    const applyTheme = () => {
+      const root = document.documentElement;
+
+      if (theme === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          root.setAttribute('data-theme', 'dark');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+      } else if (theme === 'dark') {
+        root.setAttribute('data-theme', 'dark');
+      } else {
+        root.removeAttribute('data-theme');
+      }
+
+      localStorage.setItem('medical-scribe-theme', theme);
+    };
+
+    applyTheme();
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (theme === 'system') {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
+
+  // Close settings when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSettings) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-settings-menu]')) {
+          setShowSettings(false);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showSettings]);
 
   useEffect(() => {
     setMounted(true);
@@ -234,6 +328,22 @@ export default function Home() {
     setTranscript('');
     setResult(null);
     setError(null);
+  };
+
+  // Theme and settings functions
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+  };
+
+  const handleResetSettings = () => {
+    const confirmed = window.confirm('すべての設定をリセットしますか？');
+    if (confirmed) {
+      setTheme('system');
+      localStorage.removeItem('medical-scribe-theme');
+      setSpeechRate(1.0);
+      setSelectedVoiceIndex(0);
+      setShowSettings(false);
+    }
   };
 
   // Export/Import functions
@@ -487,6 +597,12 @@ export default function Home() {
 
   // Helper to play System TTS from a specific index
   const playSystemTTS = (text: string, startIndex: number = 0) => {
+    // Prevent existing utterance from triggering onend/onerror which might disable isSpeaking unexpectedly
+    if (speechSynthesisRef.current) {
+      speechSynthesisRef.current.onend = null;
+      speechSynthesisRef.current.onerror = null;
+    }
+
     // Cancel any ongoing speech first
     window.speechSynthesis.cancel();
 
@@ -553,14 +669,21 @@ export default function Home() {
     playSystemTTS(text, speechCurrentIndexRef.current);
   }, [speechRate]);
 
-  // Effect: Handle real-time Voice changes
+  // Effect: Handle real-time Voice changes (System)
   useEffect(() => {
     if (!isSpeaking || !result) return;
-
+    
     // Restart System TTS from current position with new voice
+    // Add a small delay to ensure previous speech is cancelled properly
     const text = extractTextFromSoap(result);
-    playSystemTTS(text, speechCurrentIndexRef.current);
-  }, [selectedVoiceIndex]);
+    const currentIndex = speechCurrentIndexRef.current;
+    
+    const timer = setTimeout(() => {
+      playSystemTTS(text, currentIndex);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [selectedVoiceIndex, availableVoices]);
 
   // Layout presets
   const setLayoutPreset = (preset: 'equal' | 'left' | 'right') => {
@@ -627,23 +750,15 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             {/* Branding */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105">
+                  <DocumentTextIcon className="w-5 h-5 text-white" strokeWidth={2.5} aria-hidden="true" />
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-gray-900 leading-none">
                     Medical Voice Scribe
                   </h1>
-                  <p className="text-xs text-gray-500 font-mono">AI音声問診・カルテ自動生成</p>
+                  <p className="text-xs text-gray-500 font-medium mt-0.5">AI音声問診・カルテ自動生成</p>
                 </div>
               </div>
             </div>
@@ -660,9 +775,7 @@ export default function Home() {
                 aria-label="ヘルプを表示"
                 title="使い方を見る"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <QuestionMarkCircleIcon className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -675,9 +788,7 @@ export default function Home() {
                 aria-label="ヘルプを表示"
                 title="使い方を見る"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <QuestionMarkCircleIcon className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -698,13 +809,11 @@ export default function Home() {
                   aria-label={isRecording ? '録音を停止' : '録音を開始'}
                   aria-pressed={isRecording}
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                    {isRecording ? (
-                      <rect x="6" y="6" width="8" height="8" />
-                    ) : (
-                      <circle cx="10" cy="10" r="6" />
-                    )}
-                  </svg>
+                  {isRecording ? (
+                    <StopIcon className="w-4 h-4" aria-hidden="true" />
+                  ) : (
+                    <MicrophoneIcon className="w-4 h-4" aria-hidden="true" />
+                  )}
                   {isRecording ? '停止' : '録音'}
                 </button>
                 <button
@@ -720,9 +829,7 @@ export default function Home() {
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                      <SparklesIcon className="w-4 h-4" aria-hidden="true" />
                       カルテ生成
                     </>
                   )}
@@ -743,9 +850,7 @@ export default function Home() {
                 className="btn btn-secondary"
                 aria-label="すべてクリア"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <TrashIcon className="w-4 h-4" aria-hidden="true" />
                 クリア
               </button>
             </div>
@@ -778,9 +883,7 @@ export default function Home() {
                         className="btn btn-secondary py-1 px-3 text-xs"
                         aria-label="SOAPカルテを表示"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
+                        <ArrowRightIcon className="w-4 h-4" />
                         カルテ表示
                       </button>
                     )}
@@ -893,9 +996,7 @@ export default function Home() {
                             className="btn btn-secondary py-1 px-2 text-xs flex items-center gap-1"
                             aria-label="会話テキストに戻る"
                           >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-                            </svg>
+                            <ArrowLeftIcon className="w-4 h-4" />
                             <span>会話</span>
                           </button>
                           <h2 className="panel-title text-sm whitespace-nowrap">カルテ</h2>
@@ -909,9 +1010,7 @@ export default function Home() {
                             aria-label="インポート"
                             title="インポート"
                           >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
+                            <ArrowUpTrayIcon className="w-4 h-4" />
                           </button>
 
                           {/* Export dropdown */}
@@ -923,11 +1022,9 @@ export default function Home() {
                               aria-label="エクスポート"
                               title="エクスポート"
                             >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
+                              <ArrowDownTrayIcon className="w-4 h-4" />
                             </button>
-                            
+
                             {showExportMenu && result && (
                               <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                                 <div className="py-1">
@@ -935,18 +1032,14 @@ export default function Home() {
                                     onClick={exportAsJson}
                                     className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                   >
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
+                                    <DocumentIcon className="w-3 h-3" />
                                     JSON
                                   </button>
                                   <button
                                     onClick={exportAsCsv}
                                     className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                   >
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
+                                    <DocumentChartBarIcon className="w-3 h-3" />
                                     CSV
                                   </button>
                                 </div>
@@ -961,13 +1054,9 @@ export default function Home() {
                             aria-label={isSpeaking ? '読み上げを停止' : 'カルテを読み上げ'}
                           >
                             {isSpeaking ? (
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <rect x="6" y="6" width="8" height="8" />
-                              </svg>
+                              <StopIconSolid className="w-4 h-4" />
                             ) : (
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                              </svg>
+                              <SpeakerWaveIcon className="w-4 h-4" />
                             )}
                           </button>
                           <button
@@ -976,9 +1065,7 @@ export default function Home() {
                             className="btn btn-secondary py-1 px-2 text-xs"
                             aria-label="音声設定"
                           >
-                            <svg className={`w-4 h-4 transition-transform ${showSpeechSettings ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            <ChevronDownIcon className={`w-4 h-4 transition-transform ${showSpeechSettings ? 'rotate-180' : ''}`} />
                           </button>
                         </div>
                       </div>
@@ -995,12 +1082,10 @@ export default function Home() {
                             aria-label="カルテをインポート"
                             title="カルテをインポート"
                           >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
+                            <ArrowUpTrayIcon className="w-4 h-4" aria-hidden="true" />
                             <span className="hidden sm:inline">インポート</span>
                           </button>
-                          
+
                           {/* Export dropdown */}
                           <div className="relative" data-export-menu>
                             <button
@@ -1010,15 +1095,11 @@ export default function Home() {
                               aria-label="カルテをエクスポート"
                               title="カルテをエクスポート"
                             >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
+                              <ArrowDownTrayIcon className="w-4 h-4" aria-hidden="true" />
                               <span className="hidden sm:inline">エクスポート</span>
-                              <svg className={`w-3 h-3 ml-1 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
+                              <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
                             </button>
-                            
+
                             {/* Export menu dropdown */}
                             {showExportMenu && result && (
                               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
@@ -1027,18 +1108,14 @@ export default function Home() {
                                     onClick={exportAsJson}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                   >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
+                                    <DocumentIcon className="w-4 h-4" />
                                     JSON形式
                                   </button>
                                   <button
                                     onClick={exportAsCsv}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                   >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
+                                    <DocumentChartBarIcon className="w-4 h-4" />
                                     CSV形式
                                   </button>
                                 </div>
@@ -1054,16 +1131,12 @@ export default function Home() {
                           >
                             {isSpeaking ? (
                               <>
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                                  <rect x="6" y="6" width="8" height="8" />
-                                </svg>
+                                <StopIconSolid className="w-4 h-4" aria-hidden="true" />
                                 停止
                               </>
                             ) : (
                               <>
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                </svg>
+                                <SpeakerWaveIcon className="w-4 h-4" aria-hidden="true" />
                                 読み上げ
                               </>
                             )}
@@ -1075,9 +1148,7 @@ export default function Home() {
                             aria-label="音声設定"
                             title="音声設定"
                           >
-                            <svg className={`w-4 h-4 transition-transform ${showSpeechSettings ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            <ChevronDownIcon className={`w-4 h-4 transition-transform ${showSpeechSettings ? 'rotate-180' : ''}`} aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -1164,15 +1235,7 @@ export default function Home() {
                   {/* Empty state */}
                   {!result && !loading && !error && (
                     <div className="empty-state">
-                      <svg
-                        className="empty-state-icon"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                      <DocumentTextIcon className="empty-state-icon" aria-hidden="true" />
                       <p className="empty-state-text">
                         まだ解析されていません<br />
                         会話を録音してSOAPカルテを生成してください
