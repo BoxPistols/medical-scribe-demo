@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { SYSTEM_PROMPT } from './prompt';
-import type { SoapNote } from './types';
+import type { SoapNote, ModelId } from './types';
+import { AVAILABLE_MODELS, DEFAULT_MODEL } from './types';
 
-const OPENAI_MODEL = 'gpt-4o-mini';
+// モデルIDの検証
+function isValidModel(model: string): model is ModelId {
+  return AVAILABLE_MODELS.some(m => m.id === model);
+}
 
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -16,7 +20,7 @@ function getOpenAIClient() {
 
 export async function POST(req: Request) {
   try {
-    const { text, stream: useStream } = await req.json();
+    const { text, stream: useStream, model: requestedModel } = await req.json();
 
     if (!text) {
       return NextResponse.json(
@@ -25,12 +29,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // モデルの検証とフォールバック
+    const model = requestedModel && isValidModel(requestedModel) ? requestedModel : DEFAULT_MODEL;
+
     const openai = getOpenAIClient();
 
     // ストリーミングモード
     if (useStream) {
       const stream = await openai.chat.completions.create({
-        model: OPENAI_MODEL,
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text },
@@ -70,7 +77,7 @@ export async function POST(req: Request) {
 
     // 非ストリーミングモード（従来の動作）
     const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: text },

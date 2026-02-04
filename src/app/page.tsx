@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { SoapNote } from './api/analyze/types';
+import type { SoapNote, ModelId } from './api/analyze/types';
+import { AVAILABLE_MODELS, DEFAULT_MODEL } from './api/analyze/types';
 import {
   MicrophoneIcon,
   SparklesIcon,
@@ -251,6 +252,9 @@ export default function Home() {
   // Theme and settings state
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
+  // AI Model selection state
+  const [selectedModel, setSelectedModel] = useState<ModelId>(DEFAULT_MODEL);
+
   // Shortcuts state
   const [useModifiers, setUseModifiers] = useState(true); // Default to true (Command+R etc)
   const [shortcuts, setShortcuts] = useState<Record<ActionId, ShortcutKey>>(() => {
@@ -279,12 +283,23 @@ export default function Home() {
     if (savedUseModifiers !== null) {
       setUseModifiers(savedUseModifiers === 'true');
     }
+
+    // Load AI model setting
+    const savedModel = localStorage.getItem('medical-scribe-model') as ModelId | null;
+    if (savedModel && AVAILABLE_MODELS.some(m => m.id === savedModel)) {
+      setSelectedModel(savedModel);
+    }
   }, []);
 
   // Save modifier setting
   useEffect(() => {
     localStorage.setItem('medical-scribe-use-modifiers', String(useModifiers));
   }, [useModifiers]);
+
+  // Save AI model setting
+  useEffect(() => {
+    localStorage.setItem('medical-scribe-model', selectedModel);
+  }, [selectedModel]);
 
   // Theme management - Apply theme
   useEffect(() => {
@@ -499,7 +514,7 @@ export default function Home() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: transcript, stream: true }),
+        body: JSON.stringify({ text: transcript, stream: true, model: selectedModel }),
       });
 
       if (!res.ok) {
@@ -1308,41 +1323,80 @@ export default function Home() {
                 {isRecording ? '録音中' : '待機中'}
               </div>
 
-              {/* Shortcut settings button */}
-              <button
-                onClick={() => setShowShortcutsModal(true)}
-                className="p-2 rounded-lg text-theme-tertiary btn-theme-hover"
-                aria-label="キーボード設定"
-                title="キーボードショートカット設定"
-              >
-                <KeyboardIcon className="w-5 h-5" aria-hidden="true" />
-              </button>
+              {/* AI Model selector */}
+              <div className="relative">
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-theme-primary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="AIモデル選択"
+                  title="使用するAIモデルを選択"
+                >
+                  {AVAILABLE_MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary pointer-events-none" aria-hidden="true" />
+              </div>
 
-              {/* Theme toggle button */}
-              <button
-                onClick={handleThemeCycle}
-                className="p-2 rounded-lg text-theme-tertiary btn-theme-hover"
-                aria-label="テーマ切り替え"
-                title={`テーマ切り替え (現在: ${theme === 'system' ? '自動' : theme === 'light' ? 'ライト' : 'ダーク'})`}
-              >
-                {theme === 'light' && <SunIcon className="w-5 h-5" aria-hidden="true" />}
-                {theme === 'dark' && <MoonIcon className="w-5 h-5" aria-hidden="true" />}
-                {theme === 'system' && <ComputerDesktopIcon className="w-5 h-5" aria-hidden="true" />}
-              </button>
+              {/* Icon buttons - unified grid */}
+              <div className="flex items-center">
+                {/* Shortcut settings button */}
+                <button
+                  onClick={() => setShowShortcutsModal(true)}
+                  className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
+                  aria-label="キーボード設定"
+                  data-tooltip="ショートカット設定"
+                >
+                  <KeyboardIcon className="w-6 h-6" aria-hidden="true" />
+                </button>
 
-              <button
-                onClick={() => setShowHelp(true)}
-                className="p-2 rounded-lg text-theme-tertiary btn-theme-hover"
-                aria-label="ヘルプを表示"
-                title="使い方を見る"
-              >
-                <QuestionMarkCircleIcon className="w-5 h-5" aria-hidden="true" />
-              </button>
+                {/* Theme toggle button */}
+                <button
+                  onClick={handleThemeCycle}
+                  className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
+                  aria-label="テーマ切り替え"
+                  data-tooltip={`テーマ: ${theme === 'system' ? '自動' : theme === 'light' ? 'ライト' : 'ダーク'}`}
+                >
+                  {theme === 'light' && <SunIcon className="w-6 h-6" aria-hidden="true" />}
+                  {theme === 'dark' && <MoonIcon className="w-6 h-6" aria-hidden="true" />}
+                  {theme === 'system' && <ComputerDesktopIcon className="w-6 h-6" aria-hidden="true" />}
+                </button>
+
+                {/* Help button */}
+                <button
+                  onClick={() => setShowHelp(true)}
+                  className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
+                  aria-label="ヘルプを表示"
+                  data-tooltip="ヘルプ"
+                >
+                  <QuestionMarkCircleIcon className="w-6 h-6" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
             {/* Mobile menu */}
             <div className="sm:hidden flex items-center gap-2">
               <div className={`status-indicator ${isRecording ? 'recording recording-pulse' : 'idle'}`} />
+
+              {/* AI Model selector (Mobile) */}
+              <div className="relative">
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-2 pr-6 py-1 text-xs text-theme-primary cursor-pointer"
+                  aria-label="AIモデル選択"
+                >
+                  {AVAILABLE_MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-theme-tertiary pointer-events-none" aria-hidden="true" />
+              </div>
 
               {/* Shortcut settings button (Mobile) */}
               <button
