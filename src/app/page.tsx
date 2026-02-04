@@ -52,11 +52,13 @@ const KeyboardIcon = ({ className }: { className?: string }) => (
 );
 
 // Types for Shortcuts
-type ActionId = 
+type ActionId =
   | 'toggleRecording'
   | 'analyze'
   | 'clear'
   | 'toggleSpeech'
+  | 'increaseSpeechRate'
+  | 'decreaseSpeechRate'
   | 'import'
   | 'exportJson'
   | 'exportCsv'
@@ -88,6 +90,8 @@ const SHORTCUT_DEFS: ShortcutDef[] = [
   { id: 'analyze', label: 'カルテ生成', default: { key: 'a' } },
   { id: 'clear', label: 'すべてクリア', default: { key: 'c' } },
   { id: 'toggleSpeech', label: '読み上げ開始/停止', default: { key: 's' } },
+  { id: 'increaseSpeechRate', label: '読み上げ速度を上げる', default: { key: '=' } },
+  { id: 'decreaseSpeechRate', label: '読み上げ速度を下げる', default: { key: '-' } },
   { id: 'import', label: 'インポート', default: { key: 'i' } },
   { id: 'exportJson', label: 'JSONエクスポート', default: { key: 'j' } },
   { id: 'exportCsv', label: 'CSVエクスポート', default: { key: 'e' } },
@@ -1059,6 +1063,22 @@ export default function Home() {
           case 'toggleSpeech':
             toggleSpeech();
             break;
+          case 'increaseSpeechRate': {
+            const rates = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+            const currentIndex = rates.indexOf(speechRate);
+            if (currentIndex < rates.length - 1) {
+              setSpeechRate(rates[currentIndex + 1]);
+            }
+            break;
+          }
+          case 'decreaseSpeechRate': {
+            const rates = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+            const currentIndex = rates.indexOf(speechRate);
+            if (currentIndex > 0) {
+              setSpeechRate(rates[currentIndex - 1]);
+            }
+            break;
+          }
           case 'import':
             fileInputRef.current?.click();
             break;
@@ -1762,19 +1782,19 @@ export default function Home() {
 
                       {/* SOAP sections */}
                       <div className="soap-section subjective">
+                        <button
+                          onClick={copySectionS}
+                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
+                          aria-label="Sセクションをコピー"
+                          title="このセクションをコピー"
+                        >
+                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
+                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div className="soap-badge" style={{ background: 'var(--soap-s)' }}>S</div>
                             主観的情報
                           </div>
-                          <button
-                            onClick={copySectionS}
-                            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                            aria-label="Sセクションをコピー"
-                            title="このセクションをコピー"
-                          >
-                            <ClipboardDocumentIcon className="w-4 h-4 text-current opacity-60 hover:opacity-100" />
-                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.subjective?.presentIllness && (
@@ -1809,19 +1829,19 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section objective">
+                        <button
+                          onClick={copySectionO}
+                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
+                          aria-label="Oセクションをコピー"
+                          title="このセクションをコピー"
+                        >
+                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
+                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div className="soap-badge" style={{ background: 'var(--soap-o)' }}>O</div>
                             客観的情報
                           </div>
-                          <button
-                            onClick={copySectionO}
-                            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                            aria-label="Oセクションをコピー"
-                            title="このセクションをコピー"
-                          >
-                            <ClipboardDocumentIcon className="w-4 h-4 text-current opacity-60 hover:opacity-100" />
-                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.objective?.vitalSigns && (
@@ -1861,19 +1881,19 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section assessment">
+                        <button
+                          onClick={copySectionA}
+                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
+                          aria-label="Aセクションをコピー"
+                          title="このセクションをコピー"
+                        >
+                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
+                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div className="soap-badge" style={{ background: 'var(--soap-a)' }}>A</div>
                             評価・診断
                           </div>
-                          <button
-                            onClick={copySectionA}
-                            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                            aria-label="Aセクションをコピー"
-                            title="このセクションをコピー"
-                          >
-                            <ClipboardDocumentIcon className="w-4 h-4 text-current opacity-60 hover:opacity-100" />
-                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.assessment?.diagnosis && (
@@ -1905,19 +1925,19 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section plan">
+                        <button
+                          onClick={copySectionP}
+                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
+                          aria-label="Pセクションをコピー"
+                          title="このセクションをコピー"
+                        >
+                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
+                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div className="soap-badge" style={{ background: 'var(--soap-p)' }}>P</div>
                             治療計画
                           </div>
-                          <button
-                            onClick={copySectionP}
-                            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                            aria-label="Pセクションをコピー"
-                            title="このセクションをコピー"
-                          >
-                            <ClipboardDocumentIcon className="w-4 h-4 text-current opacity-60 hover:opacity-100" />
-                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.plan?.treatment && (
@@ -2222,7 +2242,7 @@ export default function Home() {
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-overlay backdrop-blur-sm">
               <div className="bg-theme-modal backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-theme-modal">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border bg-theme-modal-header rounded-t-2xl">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-theme-soft bg-theme-modal-header rounded-t-2xl">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-theme-card flex items-center justify-center">
                       <KeyboardIcon className="w-6 h-6 text-theme-primary" />
@@ -2245,7 +2265,7 @@ export default function Home() {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-0">
-                  <div className="divide-y divide-theme-border">
+                  <div className="divide-y divide-theme-soft">
                     {SHORTCUT_DEFS.map((def) => {
                       const isEditing = editingShortcutId === def.id;
                       const current = shortcuts[def.id];
@@ -2295,7 +2315,7 @@ export default function Home() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-theme-border bg-theme-modal-footer flex justify-between items-center">
+                <div className="px-6 py-4 border-t border-theme-soft bg-theme-modal-footer flex justify-between items-center">
                   <button
                     onClick={handleResetSettings}
                     className="text-xs text-theme-tertiary hover:text-red-500 flex items-center gap-1 transition-colors"
