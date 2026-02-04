@@ -74,6 +74,12 @@ export default function Home() {
 
   // Export/Import state
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [exportPreviewData, setExportPreviewData] = useState<{
+    type: 'json' | 'csv';
+    content: string;
+    filename: string;
+  } | null>(null);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -228,16 +234,42 @@ export default function Home() {
   // Export/Import functions
   const exportAsJson = () => {
     if (!result) return;
-    
+
     const dataStr = JSON.stringify(result, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `soap_note_${getTimestampForFilename()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const filename = `soap_note_${getTimestampForFilename()}.json`;
+
+    setExportPreviewData({
+      type: 'json',
+      content: dataStr,
+      filename
+    });
+    setShowExportPreview(true);
     setShowExportMenu(false);
+  };
+
+  const confirmExport = () => {
+    if (!exportPreviewData) return;
+
+    if (exportPreviewData.type === 'json') {
+      const blob = new Blob([exportPreviewData.content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = exportPreviewData.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else if (exportPreviewData.type === 'csv') {
+      const blob = new Blob(['\uFEFF' + exportPreviewData.content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = exportPreviewData.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    setShowExportPreview(false);
+    setExportPreviewData(null);
   };
 
   const exportAsCsv = () => {
@@ -276,17 +308,18 @@ export default function Home() {
       ['患者教育', result.soap.plan?.patientEducation || ''],
     ];
 
-    const csvContent = csvRows.map(row => 
+    const csvContent = csvRows.map(row =>
       row.map(escapeCsvCell).join(',')
     ).join('\n');
-    
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `soap_note_${getTimestampForFilename()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+
+    const filename = `soap_note_${getTimestampForFilename()}.csv`;
+
+    setExportPreviewData({
+      type: 'csv',
+      content: csvContent,
+      filename
+    });
+    setShowExportPreview(true);
     setShowExportMenu(false);
   };
 
@@ -1306,6 +1339,67 @@ export default function Home() {
               </div>
             </section>
           </div>
+
+          {/* Export Preview Modal */}
+          {showExportPreview && exportPreviewData && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    エクスポートプレビュー ({exportPreviewData.type.toUpperCase()})
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowExportPreview(false);
+                      setExportPreviewData(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="プレビューを閉じる"
+                  >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                  <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span className="font-mono">{exportPreviewData.filename}</span>
+                  </div>
+                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words">
+                    {exportPreviewData.content}
+                  </pre>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                  <button
+                    onClick={() => {
+                      setShowExportPreview(false);
+                      setExportPreviewData(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={confirmExport}
+                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    ダウンロード
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Footer disclaimer */}
           <footer className={`mt-4 pt-3 border-t border-gray-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}>
