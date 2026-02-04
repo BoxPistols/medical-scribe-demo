@@ -71,6 +71,8 @@ export default function Home() {
   const [speechRate, setSpeechRate] = useState(1.0);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceIndex, setSelectedVoiceIndex] = useState<number>(0);
+  const [ttsService, setTtsService] = useState<'system' | 'openai'>('system');
+  const [selectedOpenAIVoice, setSelectedOpenAIVoice] = useState<string>('alloy');
 
   // Export/Import state
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -84,6 +86,7 @@ export default function Home() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -480,40 +483,88 @@ export default function Home() {
     return text;
   };
 
-  const toggleSpeech = () => {
+  const toggleSpeech = async () => {
     if (!result) return;
 
     if (isSpeaking) {
       // Stop speaking
-      window.speechSynthesis.cancel();
+      if (ttsService === 'system') {
+        window.speechSynthesis.cancel();
+      } else {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+      }
       setIsSpeaking(false);
       speechSynthesisRef.current = null;
     } else {
-      // Start speaking
       const text = extractTextFromSoap(result);
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ja-JP';
-      utterance.rate = speechRate;
-      utterance.pitch = 1.0;
 
-      // Apply selected voice if available
-      if (availableVoices.length > 0 && availableVoices[selectedVoiceIndex]) {
-        utterance.voice = availableVoices[selectedVoiceIndex];
+      if (ttsService === 'system') {
+        // Start speaking with System TTS
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ja-JP';
+        utterance.rate = speechRate;
+        utterance.pitch = 1.0;
+
+        // Apply selected voice if available
+        if (availableVoices.length > 0 && availableVoices[selectedVoiceIndex]) {
+          utterance.voice = availableVoices[selectedVoiceIndex];
+        }
+
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          speechSynthesisRef.current = null;
+        };
+
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          speechSynthesisRef.current = null;
+        };
+
+        speechSynthesisRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+      } else {
+        // Start speaking with OpenAI TTS
+        setLoading(true);
+        try {
+          const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voice: selectedOpenAIVoice }),
+          });
+
+          if (!res.ok) throw new Error('音声の生成に失敗しました');
+
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audioRef.current = audio;
+
+          audio.onended = () => {
+            setIsSpeaking(false);
+            audioRef.current = null;
+            URL.revokeObjectURL(url);
+          };
+
+          audio.onerror = () => {
+            setIsSpeaking(false);
+            audioRef.current = null;
+            URL.revokeObjectURL(url);
+            setError('音声の再生中にエラーが発生しました');
+          };
+
+          await audio.play();
+          setIsSpeaking(true);
+        } catch (e) {
+          console.error(e);
+          setError('AI音声の生成に失敗しました');
+        } finally {
+          setLoading(false);
+        }
       }
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        speechSynthesisRef.current = null;
-      };
-
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        speechSynthesisRef.current = null;
-      };
-
-      speechSynthesisRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-      setIsSpeaking(true);
     }
   };
 
@@ -1023,33 +1074,64 @@ export default function Home() {
                   {showSpeechSettings && result && (
                     <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                       <div className="space-y-4">
-                        {/* Speed selection */}
+                        {/* Service Selection */}
                         <div>
                           <label className="block text-xs font-semibold text-gray-700 mb-2">
-                            読み上げスピード
+                            音声サービス
                           </label>
-                          <div className="flex flex-wrap gap-2">
-                            {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
-                              <button
-                                key={rate}
-                                onClick={() => setSpeechRate(rate)}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                  speechRate === rate
-                                    ? 'bg-teal-600 text-white'
-                                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                }`}
-                              >
-                                {rate}x
-                              </button>
-                            ))}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setTtsService('system')}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                ttsService === 'system'
+                                  ? 'bg-teal-600 text-white'
+                                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              システム音声 (無料)
+                            </button>
+                            <button
+                              onClick={() => setTtsService('openai')}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                ttsService === 'openai'
+                                  ? 'bg-teal-600 text-white'
+                                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              AI音声 (高音質)
+                            </button>
                           </div>
                         </div>
 
-                        {/* Voice selection */}
-                        {availableVoices.length > 0 && (
+                        {/* Speed selection (only for system) */}
+                        {ttsService === 'system' && (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-2">
+                              読み上げスピード
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
+                                <button
+                                  key={rate}
+                                  onClick={() => setSpeechRate(rate)}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                    speechRate === rate
+                                      ? 'bg-teal-600 text-white'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {rate}x
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Voice selection (System) */}
+                        {ttsService === 'system' && availableVoices.length > 0 && (
                           <div>
                             <label htmlFor="voice-select" className="block text-xs font-semibold text-gray-700 mb-2">
-                              音声の種類
+                              システム音声の選択
                             </label>
                             <select
                               id="voice-select"
@@ -1063,6 +1145,40 @@ export default function Home() {
                                 </option>
                               ))}
                             </select>
+                          </div>
+                        )}
+
+                        {/* Voice selection (OpenAI) */}
+                        {ttsService === 'openai' && (
+                          <div>
+                            <label htmlFor="openai-voice-select" className="block text-xs font-semibold text-gray-700 mb-2">
+                              AIボイスの選択 (OpenAI)
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {[
+                                { id: 'alloy', label: 'Alloy (中性的)' },
+                                { id: 'echo', label: 'Echo (男性的)' },
+                                { id: 'fable', label: 'Fable (叙述的)' },
+                                { id: 'onyx', label: 'Onyx (力強い)' },
+                                { id: 'nova', label: 'Nova (女性的)' },
+                                { id: 'shimmer', label: 'Shimmer (穏やか)' },
+                              ].map((v) => (
+                                <button
+                                  key={v.id}
+                                  onClick={() => setSelectedOpenAIVoice(v.id)}
+                                  className={`px-3 py-2 text-xs font-medium rounded-md transition-colors border ${
+                                    selectedOpenAIVoice === v.id
+                                      ? 'bg-teal-50 border-teal-500 text-teal-700'
+                                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {v.label}
+                                </button>
+                              ))}
+                            </div>
+                            <p className="mt-2 text-[10px] text-gray-500">
+                              ※ OpenAI TTS APIを使用するため、API利用料が発生します。
+                            </p>
                           </div>
                         )}
                       </div>
