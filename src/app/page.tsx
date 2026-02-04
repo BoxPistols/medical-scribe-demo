@@ -1639,7 +1639,7 @@ export default function Home() {
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-                  className="appearance-none bg-theme-card border border-theme-border rounded pl-1.5 pr-5 py-0.5 text-[10px] text-theme-primary cursor-pointer max-w-[90px]"
+                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-2 pr-6 py-1 text-sm text-theme-primary cursor-pointer"
                   aria-label="AIモデル選択"
                 >
                   {AVAILABLE_MODELS.map((model) => (

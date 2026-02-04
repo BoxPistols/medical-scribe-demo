@@ -175,6 +175,16 @@ html {
   }
 }
 
+/* Ensure select and option have readable font size (min 12px) */
+select {
+  font-size: 0.875rem; /* 14px */
+}
+
+select option {
+  font-size: 0.875rem; /* 14px - ensures dropdown options are readable */
+  padding: 0.5rem;
+}
+
 body {
   min-height: 100vh;
   background: linear-gradient(to bottom, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
