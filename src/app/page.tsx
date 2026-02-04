@@ -81,6 +81,9 @@ export default function Home() {
     filename: string;
   } | null>(null);
 
+  // Help modal state
+  const [showHelp, setShowHelp] = useState(false);
+
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const speechCurrentIndexRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -651,11 +654,31 @@ export default function Home() {
                 <div className={`status-indicator ${isRecording ? 'recording' : 'idle'} ${isRecording ? 'recording-pulse' : ''}`} />
                 {isRecording ? '録音中' : '待機中'}
               </div>
+              <button
+                onClick={() => setShowHelp(true)}
+                className="p-2 rounded-lg text-gray-500 hover:text-teal-600 hover:bg-gray-100 transition-colors"
+                aria-label="ヘルプを表示"
+                title="使い方を見る"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
             </div>
 
             {/* Mobile menu placeholder */}
-            <div className="sm:hidden">
+            <div className="sm:hidden flex items-center gap-2">
               <div className={`status-indicator ${isRecording ? 'recording recording-pulse' : 'idle'}`} />
+              <button
+                onClick={() => setShowHelp(true)}
+                className="p-1.5 rounded-lg text-gray-500 hover:text-teal-600 hover:bg-gray-100 transition-colors"
+                aria-label="ヘルプを表示"
+                title="使い方を見る"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -1444,6 +1467,201 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     ダウンロード
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Help Modal */}
+          {showHelp && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+              <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-teal-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">使い方ガイド</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowHelp(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="ヘルプを閉じる"
+                  >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-6">
+                  <div className="space-y-6">
+                    {/* Overview */}
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        このアプリについて
+                      </h4>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        Medical Voice Scribeは、音声による医療問診を自動的にSOAPカルテ形式に変換するデモアプリケーションです。
+                        医療現場での記録業務の効率化を目的としています。
+                      </p>
+                    </div>
+
+                    {/* How to Use */}
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        基本的な使い方
+                      </h4>
+                      <ol className="space-y-3 text-sm text-gray-700">
+                        <li className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                          <div>
+                            <span className="font-semibold">録音ボタンをクリック</span>して、音声入力を開始します。マイクの使用許可を求められた場合は許可してください。
+                          </div>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                          <div>
+                            医師と患者の会話を<span className="font-semibold">自然に話します</span>。問診内容、症状、診察結果などを含めてください。
+                          </div>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                          <div>
+                            録音が完了したら<span className="font-semibold">停止ボタン</span>をクリックし、テキスト化された内容を確認します。
+                          </div>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                          <div>
+                            必要に応じてテキストを編集し、<span className="font-semibold">「SOAP生成」ボタン</span>をクリックします。
+                          </div>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">5</span>
+                          <div>
+                            AIが自動的に<span className="font-semibold">SOAP形式のカルテ</span>を生成します。
+                          </div>
+                        </li>
+                      </ol>
+                    </div>
+
+                    {/* Features */}
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                        </svg>
+                        主な機能
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="font-semibold text-gray-900 mb-1">🎤 音声入力</div>
+                          <div className="text-gray-600 text-xs">ブラウザの音声認識機能を使用してリアルタイムに文字起こし</div>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="font-semibold text-gray-900 mb-1">🤖 AI生成</div>
+                          <div className="text-gray-600 text-xs">OpenAI GPT-4oを使用したSOAPカルテの自動生成</div>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="font-semibold text-gray-900 mb-1">🔊 読み上げ</div>
+                          <div className="text-gray-600 text-xs">生成されたカルテをシステム音声で読み上げ（速度・音声調整可能）</div>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="font-semibold text-gray-900 mb-1">💾 保存・共有</div>
+                          <div className="text-gray-600 text-xs">JSON/CSV形式でエクスポート、インポートが可能</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SOAP Format */}
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        SOAP形式とは
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-red-600 text-white rounded flex items-center justify-center text-xs font-bold">S</div>
+                          <div>
+                            <span className="font-semibold text-gray-900">Subjective（主観的情報）</span>
+                            <p className="text-gray-600 text-xs mt-0.5">患者が訴える症状や感じていること</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-blue-700 text-white rounded flex items-center justify-center text-xs font-bold">O</div>
+                          <div>
+                            <span className="font-semibold text-gray-900">Objective（客観的情報）</span>
+                            <p className="text-gray-600 text-xs mt-0.5">測定可能な検査結果やバイタルサイン</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-emerald-700 text-white rounded flex items-center justify-center text-xs font-bold">A</div>
+                          <div>
+                            <span className="font-semibold text-gray-900">Assessment（評価）</span>
+                            <p className="text-gray-600 text-xs mt-0.5">診断名や臨床的な評価・判断</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-purple-700 text-white rounded flex items-center justify-center text-xs font-bold">P</div>
+                          <div>
+                            <span className="font-semibold text-gray-900">Plan（計画）</span>
+                            <p className="text-gray-600 text-xs mt-0.5">治療方針、処方、追加検査、フォローアップ</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Important Notes */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <h4 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        重要な注意事項
+                      </h4>
+                      <ul className="space-y-1 text-xs text-amber-900">
+                        <li className="flex gap-2">
+                          <span>•</span>
+                          <span>このアプリは<strong>デモンストレーション用途</strong>です。実際の臨床現場での使用は想定していません。</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span>•</span>
+                          <span>生成されたカルテ内容は必ず<strong>医療従事者が確認・修正</strong>してください。</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span>•</span>
+                          <span>個人情報や機密情報を含むデータの入力は<strong>避けてください</strong>。</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span>•</span>
+                          <span>音声認識の精度はブラウザやマイクの品質に依存します。</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                  <button
+                    onClick={() => setShowHelp(false)}
+                    className="px-5 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
+                  >
+                    閉じる
                   </button>
                 </div>
               </div>
