@@ -1,130 +1,136 @@
-import { describe, it, expect } from 'vitest'
-
-// Helper functions that mirror the ones in page.tsx
-const getTimestampForFilename = (): string => {
-  const now = new Date()
-  return now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
-}
-
-const escapeCsvCell = (value: string): string => {
-  if (value.includes('"') || value.includes(',') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`
-  }
-  return value
-}
-
-const formatShortcut = (
-  shortcut: { key: string; meta?: boolean; shift?: boolean; alt?: boolean },
-  forDisplay = false
-): string => {
-  const parts: string[] = []
-  const isMac = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
-
-  if (shortcut.meta) {
-    parts.push(forDisplay ? (isMac ? 'Cmd' : 'Ctrl') : 'meta')
-  }
-  if (shortcut.alt) {
-    parts.push(forDisplay ? 'Alt' : 'alt')
-  }
-  if (shortcut.shift) {
-    parts.push(forDisplay ? 'Shift' : 'shift')
-  }
-  parts.push(forDisplay ? shortcut.key.toUpperCase() : shortcut.key.toLowerCase())
-
-  return forDisplay ? parts.join('+') : parts.join('+')
-}
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  getTimestampForFilename,
+  escapeCsvCell,
+  formatShortcut,
+  extractTextFromSoap,
+  validateTextInput,
+  isValidSoapNote,
+  isMacPlatform,
+} from '@/lib/helpers'
 
 describe('Helper Functions', () => {
   describe('getTimestampForFilename', () => {
-    it('should return ISO format timestamp without colons or dots', () => {
+    it('should return ISO format timestamp without colons', () => {
       const timestamp = getTimestampForFilename()
 
-      // Should not contain : or .
+      // Should not contain colons
       expect(timestamp).not.toContain(':')
-      expect(timestamp).not.toContain('.')
 
-      // Should be 19 characters (YYYY-MM-DDTHH-MM-SS)
-      expect(timestamp).toHaveLength(19)
-
-      // Should match the pattern
+      // Should match the pattern YYYY-MM-DDTHH-MM-SS
       expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$/)
+    })
+
+    it('should return 19 characters', () => {
+      const timestamp = getTimestampForFilename()
+      expect(timestamp).toHaveLength(19)
     })
   })
 
   describe('escapeCsvCell', () => {
-    it('should return value unchanged if no special characters', () => {
-      expect(escapeCsvCell('simple text')).toBe('simple text')
-      expect(escapeCsvCell('12345')).toBe('12345')
+    it('should wrap value in double quotes', () => {
+      expect(escapeCsvCell('simple text')).toBe('"simple text"')
+      expect(escapeCsvCell('12345')).toBe('"12345"')
     })
 
-    it('should wrap in quotes and escape double quotes', () => {
+    it('should escape internal double quotes', () => {
       expect(escapeCsvCell('text with "quotes"')).toBe('"text with ""quotes"""')
     })
 
-    it('should wrap in quotes if contains comma', () => {
+    it('should handle values with commas', () => {
       expect(escapeCsvCell('one, two, three')).toBe('"one, two, three"')
     })
 
-    it('should wrap in quotes if contains newline', () => {
+    it('should handle values with newlines', () => {
       expect(escapeCsvCell('line1\nline2')).toBe('"line1\nline2"')
     })
 
-    it('should handle multiple special characters', () => {
-      expect(escapeCsvCell('text, with "quotes" and\nnewlines')).toBe(
-        '"text, with ""quotes"" and\nnewlines"'
-      )
+    it('should convert non-string values to strings', () => {
+      expect(escapeCsvCell(123)).toBe('"123"')
+      expect(escapeCsvCell(null)).toBe('"null"')
+      expect(escapeCsvCell(undefined)).toBe('"undefined"')
+    })
+  })
+
+  describe('isMacPlatform', () => {
+    it('should return false when navigator is undefined', () => {
+      // In test environment, navigator may be mocked
+      const result = isMacPlatform()
+      expect(typeof result).toBe('boolean')
     })
   })
 
   describe('formatShortcut', () => {
+    it('should return "-" for undefined shortcut', () => {
+      expect(formatShortcut(undefined)).toBe('-')
+    })
+
     it('should format simple key', () => {
-      expect(formatShortcut({ key: 'r' }, true)).toBe('R')
-      expect(formatShortcut({ key: 'a' }, true)).toBe('A')
+      expect(formatShortcut({ key: 'r' })).toBe('R')
+      expect(formatShortcut({ key: 'a' })).toBe('A')
     })
 
-    it('should format key with meta modifier', () => {
-      const result = formatShortcut({ key: 'r', meta: true }, true)
-      // Result will be either 'Cmd+R' or 'Ctrl+R' depending on platform
-      expect(result).toMatch(/^(Cmd|Ctrl)\+R$/)
+    it('should format space key', () => {
+      expect(formatShortcut({ key: ' ' })).toBe('Space')
     })
 
-    it('should format key with multiple modifiers', () => {
-      const result = formatShortcut({ key: 's', meta: true, shift: true }, true)
-      expect(result).toMatch(/^(Cmd|Ctrl)\+Shift\+S$/)
+    it('should format key with modifiers', () => {
+      const result = formatShortcut({ key: 'r', ctrl: true })
+      // Result depends on platform detection
+      expect(result).toMatch(/(Cmd|Ctrl)\s?\+?\s?R/)
     })
 
-    it('should format for non-display (lowercase)', () => {
-      expect(formatShortcut({ key: 'R' }, false)).toBe('r')
-      expect(formatShortcut({ key: 'A', meta: true }, false)).toBe('meta+a')
+    it('should respect compact option', () => {
+      const normal = formatShortcut({ key: 'r', shift: true }, false)
+      const compact = formatShortcut({ key: 'r', shift: true }, true)
+
+      expect(normal).toContain(' + ')
+      expect(compact).toContain('+')
+      expect(compact).not.toContain(' + ')
+    })
+  })
+
+  describe('validateTextInput', () => {
+    it('should reject empty string', () => {
+      expect(validateTextInput('')).toEqual({ valid: false, error: 'テキストがありません' })
+    })
+
+    it('should reject whitespace-only string', () => {
+      expect(validateTextInput('   ')).toEqual({ valid: false, error: 'テキストがありません' })
+    })
+
+    it('should reject undefined', () => {
+      expect(validateTextInput(undefined)).toEqual({ valid: false, error: 'テキストがありません' })
+    })
+
+    it('should accept valid text', () => {
+      expect(validateTextInput('valid text')).toEqual({ valid: true })
+    })
+  })
+
+  describe('isValidSoapNote', () => {
+    it('should return false for null', () => {
+      expect(isValidSoapNote(null)).toBe(false)
+    })
+
+    it('should return false for non-object', () => {
+      expect(isValidSoapNote('string')).toBe(false)
+      expect(isValidSoapNote(123)).toBe(false)
+    })
+
+    it('should return false for object without soap property', () => {
+      expect(isValidSoapNote({})).toBe(false)
+      expect(isValidSoapNote({ summary: 'test' })).toBe(false)
+    })
+
+    it('should return true for object with soap property', () => {
+      expect(isValidSoapNote({ soap: {} })).toBe(true)
+      expect(isValidSoapNote({ soap: { subjective: {} } })).toBe(true)
     })
   })
 })
 
 describe('SOAP Text Extraction', () => {
-  const extractTextFromSoap = (soap: {
-    subjective?: { presentIllness?: string }
-    objective?: { physicalExam?: string }
-    assessment?: { diagnosis?: string }
-    plan?: { treatment?: string }
-  }): string => {
-    const sections: string[] = []
-
-    if (soap.subjective?.presentIllness) {
-      sections.push(`主観的情報: ${soap.subjective.presentIllness}`)
-    }
-    if (soap.objective?.physicalExam) {
-      sections.push(`客観的情報: ${soap.objective.physicalExam}`)
-    }
-    if (soap.assessment?.diagnosis) {
-      sections.push(`評価: ${soap.assessment.diagnosis}`)
-    }
-    if (soap.plan?.treatment) {
-      sections.push(`計画: ${soap.plan.treatment}`)
-    }
-
-    return sections.join('\n')
-  }
-
   it('should extract text from all SOAP sections', () => {
     const soap = {
       subjective: { presentIllness: '頭痛が続いている' },

@@ -53,42 +53,53 @@ test.describe('Medical Voice Scribe - Basic Flow', () => {
 })
 
 test.describe('Theme Toggle', () => {
-  test('should toggle theme', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/')
+  })
+
+  test('should toggle theme when button clicked', async ({ page }) => {
+    const html = page.locator('html')
+
+    // Get initial theme state
+    const initialTheme = await html.getAttribute('data-theme')
 
     // Find and click theme toggle button
     const themeButton = page.getByRole('button', { name: /テーマ/ })
     await themeButton.click()
 
-    // Check that data-theme attribute changes
-    const html = page.locator('html')
-    const initialTheme = await html.getAttribute('data-theme')
+    // Wait for theme change
+    await page.waitForTimeout(100)
 
-    await themeButton.click()
+    // Get new theme state
     const newTheme = await html.getAttribute('data-theme')
 
-    // Theme should have changed (or cycled)
-    expect(initialTheme !== newTheme || initialTheme === null || newTheme === null).toBeTruthy()
+    // Theme should have changed
+    expect(initialTheme).not.toBe(newTheme)
   })
 })
 
 test.describe('Model Selection', () => {
-  test('should have model selector', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/')
+  })
 
+  test('should have model selector', async ({ page }) => {
     const modelSelector = page.locator('select[aria-label="AIモデル選択"]')
     await expect(modelSelector).toBeVisible()
   })
 
   test('should be able to change model', async ({ page }) => {
-    await page.goto('/')
-
     const modelSelector = page.locator('select[aria-label="AIモデル選択"]').first()
-    await modelSelector.selectOption({ index: 1 })
 
-    // Verify selection changed
-    const selectedValue = await modelSelector.inputValue()
-    expect(selectedValue).toBeTruthy()
+    // Get initial value
+    const initialValue = await modelSelector.inputValue()
+
+    // Select a different model by value
+    await modelSelector.selectOption('gpt-4.1-mini')
+
+    // Verify selection changed to specific value
+    await expect(modelSelector).toHaveValue('gpt-4.1-mini')
+    expect(initialValue).not.toBe('gpt-4.1-mini')
   })
 })
 
@@ -97,15 +108,39 @@ test.describe('Responsive Design', () => {
     await page.setViewportSize({ width: 375, height: 667 })
     await page.goto('/')
 
-    // Mobile-specific elements should be visible
+    // Header should be visible
     await expect(page.locator('header')).toBeVisible()
+
+    // Mobile-specific: Should show compact branding
+    // On mobile, the title might be shorter or hidden
+    await expect(page.locator('header')).toContainText(/Voice|Medical/)
   })
 
   test('should display desktop layout on large screens', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/')
 
-    // Desktop layout should show resizable panels
+    // Header should be visible with full branding
     await expect(page.locator('header')).toBeVisible()
+    await expect(page.locator('header')).toContainText('Medical Voice Scribe')
+
+    // Desktop should show status badge
+    await expect(page.locator('.status-badge, [class*="status"]')).toBeVisible()
+  })
+})
+
+test.describe('Keyboard Shortcuts Display', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+  })
+
+  test('should display keyboard shortcuts on buttons', async ({ page }) => {
+    // Recording button should show shortcut
+    const recordButton = page.getByRole('button', { name: /録音/ })
+    await expect(recordButton).toBeVisible()
+
+    // Generate button should show shortcut
+    const generateButton = page.getByRole('button', { name: /カルテ生成/ })
+    await expect(generateButton).toBeVisible()
   })
 })

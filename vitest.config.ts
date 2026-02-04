@@ -17,8 +17,10 @@ export default defineConfig({
       exclude: [
         'src/**/*.d.ts',
         'src/**/*.stories.tsx',
-        'src/app/layout.tsx',
+        'src/app/layout.tsx', // Next.js root layout - mostly framework boilerplate
       ],
+      // Coverage thresholds: 70% is a reasonable starting point
+      // Consider increasing for critical paths (API routes, data handling)
       thresholds: {
         global: {
           branches: 70,
