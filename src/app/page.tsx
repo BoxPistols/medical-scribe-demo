@@ -2080,10 +2080,42 @@ export default function Home() {
                         </div>
                       </div>
                     ) : (
-                      <div className="w-full flex items-center justify-between gap-1">
+                      <div className="w-full flex items-center justify-between">
+                        {/* 左: 見出し */}
                         <h2 className="panel-title whitespace-nowrap text-sm">カルテ</h2>
-                        {/* アクションボタン群 */}
-                        <div className="flex items-center gap-0.5">
+
+                        {/* 中央: Voice */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={toggleSpeech}
+                            disabled={!result}
+                            className="btn btn-secondary text-xs py-0.5 px-2"
+                            aria-label={isSpeaking ? "読み上げを停止" : "カルテを読み上げ"}
+                            data-tooltip={`読み上げ [${formatShortcut(shortcuts.toggleSpeech, true)}]`}
+                          >
+                            {isSpeaking ? (
+                              <StopIconSolid className="w-3.5 h-3.5" aria-hidden="true" />
+                            ) : (
+                              <SpeakerWaveIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                            )}
+                            <span className="text-xs">Voice</span>
+                          </button>
+                          <button
+                            onClick={() => setShowSpeechSettings(!showSpeechSettings)}
+                            disabled={!result}
+                            className="btn btn-secondary text-xs p-1"
+                            aria-label="音声設定"
+                            data-tooltip="音声設定"
+                          >
+                            <ChevronDownIcon
+                              className={`w-3 h-3 transition-transform ${showSpeechSettings ? "rotate-180" : ""}`}
+                              aria-hidden="true"
+                            />
+                          </button>
+                        </div>
+
+                        {/* 右: ファイル操作 + コピー */}
+                        <div className="flex items-center gap-1">
                           {/* Import button */}
                           <button
                             onClick={handleImportClick}
@@ -2105,9 +2137,7 @@ export default function Home() {
                             >
                               <ArrowDownTrayIcon className="w-3.5 h-3.5" aria-hidden="true" />
                               <ChevronDownIcon
-                                className={`w-3 h-3 transition-transform ${
-                                  showExportMenu ? "rotate-180" : ""
-                                }`}
+                                className={`w-3 h-3 transition-transform ${showExportMenu ? "rotate-180" : ""}`}
                                 aria-hidden="true"
                               />
                             </button>
@@ -2135,31 +2165,6 @@ export default function Home() {
                             )}
                           </div>
 
-                          <button
-                            onClick={toggleSpeech}
-                            disabled={!result}
-                            className="btn btn-secondary text-xs py-0.5 px-1.5"
-                            aria-label={isSpeaking ? "読み上げを停止" : "カルテを読み上げ"}
-                            data-tooltip={`読み上げ [${formatShortcut(shortcuts.toggleSpeech, true)}]`}
-                          >
-                            {isSpeaking ? (
-                              <StopIconSolid className="w-3.5 h-3.5" aria-hidden="true" />
-                            ) : (
-                              <SpeakerWaveIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => setShowSpeechSettings(!showSpeechSettings)}
-                            disabled={!result}
-                            className="btn btn-secondary text-xs p-1"
-                            aria-label="音声設定"
-                            data-tooltip="音声設定"
-                          >
-                            <ChevronDownIcon
-                              className={`w-3 h-3 transition-transform ${showSpeechSettings ? "rotate-180" : ""}`}
-                              aria-hidden="true"
-                            />
-                          </button>
                           {/* Copy button */}
                           <button
                             onClick={copyFullChart}
