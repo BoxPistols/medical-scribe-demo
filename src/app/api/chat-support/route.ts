@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import type { SoapNote, ModelId } from '../analyze/types';
+import type { SoapNote, ModelId, ChatMessage } from '../analyze/types';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from '../analyze/types';
 
 // チャットサポート用システムプロンプト
@@ -17,6 +17,11 @@ const CHAT_SUPPORT_PROMPT = `あなたは医療従事者向けの診療支援AI�
 - 医学的な提案は、あくまで参考情報として提示し、最終判断は医療従事者に委ねてください
 - 患者に直接説明する内容ではなく、医療従事者向けの専門的な内容で回答してください
 - 不確かな情報は推測であることを明示してください
+
+## 重要：免責事項とプライバシー
+- **このAIは医療機器ではなく、診断・治療を目的としたものではありません。** 提示された情報は必ず医療従事者が検証してください。
+- **患者の個人情報（氏名、住所、生年月日など）は入力データに含まれないようにしてください。**
+- AIは一般的な医学知識に基づいて回答しますが、最新のガイドラインや個別の症例の特殊性を完全に反映できない場合があります。
 
 ## アプリの使い方に関する質問への回答
 このアプリ「Medical Voice Scribe」は医療音声文字起こし＆カルテ生成アプリです：
@@ -51,62 +56,77 @@ function getOpenAIClient() {
 
 // SOAPノートをコンテキスト文字列に変換
 function formatSoapContext(soapNote: SoapNote | null): string {
-  if (!soapNote) return '（カルテデータなし）';
+  if (!soapNote || !soapNote.soap) return '（カルテデータなし）';
 
   const { soap, summary, patientInfo } = soapNote;
+  
+  // 安全なアクセスヘルパー
+  const safeStr = (val: string | undefined | null) => val || '不明';
+  const safeJoin = (arr: string[] | undefined | null) => Array.isArray(arr) && arr.length > 0 ? arr.join(', ') : 'なし';
 
   return `
 ## 現在の診療データ
 
 ### 要約
-${summary}
+${safeStr(summary)}
 
 ### 患者情報
-- 主訴: ${patientInfo.chiefComplaint}
-- 症状期間: ${patientInfo.duration}
+- 主訴: ${safeStr(patientInfo?.chiefComplaint)}
+- 症状期間: ${safeStr(patientInfo?.duration)}
 
 ### S（主観的情報）
-- 現病歴: ${soap.subjective.presentIllness}
-- 症状: ${soap.subjective.symptoms.join(', ')}
-- 重症度: ${soap.subjective.severity}
-- 発症時期: ${soap.subjective.onset}
-- 随伴症状: ${soap.subjective.associatedSymptoms.join(', ')}
-- 既往歴: ${soap.subjective.pastMedicalHistory}
-- 服用中の薬: ${soap.subjective.medications.join(', ') || 'なし'}
+- 現病歴: ${safeStr(soap.subjective?.presentIllness)}
+- 症状: ${safeJoin(soap.subjective?.symptoms)}
+- 重症度: ${safeStr(soap.subjective?.severity)}
+- 発症時期: ${safeStr(soap.subjective?.onset)}
+- 随伴症状: ${safeJoin(soap.subjective?.associatedSymptoms)}
+- 既往歴: ${safeStr(soap.subjective?.pastMedicalHistory)}
+- 服用中の薬: ${safeJoin(soap.subjective?.medications)}
 
 ### O（客観的情報）
-- バイタル: BP ${soap.objective.vitalSigns.bloodPressure}, P ${soap.objective.vitalSigns.pulse}, T ${soap.objective.vitalSigns.temperature}, RR ${soap.objective.vitalSigns.respiratoryRate}
-- 身体所見: ${soap.objective.physicalExam}
-- 検査所見: ${soap.objective.laboratoryFindings}
+- バイタル: BP ${safeStr(soap.objective?.vitalSigns?.bloodPressure)}, P ${safeStr(soap.objective?.vitalSigns?.pulse)}, T ${safeStr(soap.objective?.vitalSigns?.temperature)}, RR ${safeStr(soap.objective?.vitalSigns?.respiratoryRate)}
+- 身体所見: ${safeStr(soap.objective?.physicalExam)}
+- 検査所見: ${safeStr(soap.objective?.laboratoryFindings)}
 
 ### A（評価）
-- 診断: ${soap.assessment.diagnosis}
-- ICD-10: ${soap.assessment.icd10}
-- 鑑別診断: ${soap.assessment.differentialDiagnosis.join(', ')}
-- 臨床的印象: ${soap.assessment.clinicalImpression}
+- 診断: ${safeStr(soap.assessment?.diagnosis)}
+- ICD-10: ${safeStr(soap.assessment?.icd10)}
+- 鑑別診断: ${safeJoin(soap.assessment?.differentialDiagnosis)}
+- 臨床的印象: ${safeStr(soap.assessment?.clinicalImpression)}
 
 ### P（計画）
-- 治療方針: ${soap.plan.treatment}
-- 処方薬: ${soap.plan.medications.map(m => `${m.name} ${m.dosage} ${m.frequency}`).join(', ')}
-- 検査計画: ${soap.plan.tests.join(', ')}
-- 紹介: ${soap.plan.referral}
-- フォローアップ: ${soap.plan.followUp}
-- 患者教育: ${soap.plan.patientEducation}
+- 治療方針: ${safeStr(soap.plan?.treatment)}
+- 処方薬: ${Array.isArray(soap.plan?.medications) ? soap.plan.medications.map(m => `${m.name || '名称不明'} ${m.dosage || ''} ${m.frequency || ''}`).join(', ') : 'なし'}
+- 検査計画: ${safeJoin(soap.plan?.tests)}
+- 紹介: ${safeStr(soap.plan?.referral)}
+- フォローアップ: ${safeStr(soap.plan?.followUp)}
+- 患者教育: ${safeStr(soap.plan?.patientEducation)}
 `;
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
 }
 
 export async function POST(req: Request) {
   try {
-    const { message, soapNote, transcript, model: requestedModel, conversationHistory } = await req.json();
+    const body = await req.json();
+    const { message, soapNote, transcript, model: requestedModel, conversationHistory } = body;
 
-    if (!message) {
+    // 基本的な入力検証
+    if (!message || typeof message !== 'string') {
       return NextResponse.json(
-        { error: 'メッセージがありません' },
+        { error: 'メッセージが無効です' },
+        { status: 400 }
+      );
+    }
+
+    if (message.length > 2000) {
+      return NextResponse.json(
+        { error: 'メッセージが長すぎます（最大2000文字）' },
+        { status: 400 }
+      );
+    }
+
+    if (transcript && typeof transcript === 'string' && transcript.length > 20000) {
+      return NextResponse.json(
+        { error: 'トランスクリプトが長すぎます' },
         { status: 400 }
       );
     }
@@ -118,15 +138,24 @@ export async function POST(req: Request) {
 
     // コンテキストの構築
     const soapContext = formatSoapContext(soapNote);
-    const transcriptContext = transcript ? `\n## 元のトランスクリプト\n${transcript.slice(0, 2000)}` : '';
+    const transcriptContext = transcript ? `\n## 元のトランスクリプト\n${transcript.slice(0, 5000)}` : ''; // コンテキスト制限のため切り詰め
 
-    // 会話履歴の構築
-    const historyMessages: OpenAI.Chat.ChatCompletionMessageParam[] = (conversationHistory || [])
-      .slice(-10)
-      .map((msg: ChatMessage) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      }));
+    // 会話履歴の検証と構築
+    const validRoles = ['user', 'assistant', 'system'];
+    const historyMessages: OpenAI.Chat.ChatCompletionMessageParam[] = Array.isArray(conversationHistory) 
+      ? conversationHistory
+          .filter((msg: any) => 
+            msg && 
+            typeof msg === 'object' && 
+            validRoles.includes(msg.role) && 
+            typeof msg.content === 'string'
+          )
+          .slice(-10)
+          .map((msg: any) => ({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content.slice(0, 1000), // 各メッセージの長さも制限
+          }))
+      : [];
 
     const completion = await openai.chat.completions.create({
       model,

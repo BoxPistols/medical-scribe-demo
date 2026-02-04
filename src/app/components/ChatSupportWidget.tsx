@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ChatBubbleLeftRightIcon,
   XMarkIcon,
@@ -15,16 +15,7 @@ import {
   BeakerIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
-import { SoapNote, ModelId } from "../api/analyze/types";
-
-// チャットメッセージの型
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  timestamp: Date;
-  type?: "recommendation" | "warning" | "help" | "normal";
-}
+import { SoapNote, ModelId, ChatMessage } from "../api/analyze/types";
 
 // レコメンドアイテムの型
 interface Recommendation {
@@ -136,14 +127,14 @@ const HELP_TOPICS: HelpTopic[] = [
 
 // 問診結果からレコメンドを生成する関数
 function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
-  if (!soapNote) return [];
+  if (!soapNote || !soapNote.soap) return [];
 
   const recommendations: Recommendation[] = [];
   const { soap } = soapNote;
 
   // 鑑別診断の確認を促す
   if (
-    soap.assessment.differentialDiagnosis &&
+    soap.assessment?.differentialDiagnosis &&
     soap.assessment.differentialDiagnosis.length > 0
   ) {
     recommendations.push({
@@ -158,7 +149,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
 
   // 症状の重症度に基づく警告
   if (
-    soap.subjective.severity &&
+    soap.subjective?.severity &&
     (soap.subjective.severity.includes("重") ||
       soap.subjective.severity.includes("強"))
   ) {
@@ -173,7 +164,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
   }
 
   // 追加検査の提案
-  if (soap.plan.tests && soap.plan.tests.length > 0) {
+  if (soap.plan?.tests && soap.plan.tests.length > 0) {
     recommendations.push({
       id: "tests-suggested",
       type: "test",
@@ -185,7 +176,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
   }
 
   // フォローアップの提案
-  if (soap.plan.followUp) {
+  if (soap.plan?.followUp) {
     recommendations.push({
       id: "followup-reminder",
       type: "followup",
@@ -197,7 +188,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
   }
 
   // 患者教育のポイント
-  if (soap.plan.patientEducation) {
+  if (soap.plan?.patientEducation) {
     recommendations.push({
       id: "patient-education",
       type: "education",
@@ -210,9 +201,9 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
 
   // 薬の相互作用チェック
   if (
-    soap.plan.medications &&
-    soap.plan.medications.length > 1 &&
-    soap.subjective.medications &&
+    soap.plan?.medications &&
+    soap.plan.medications.length > 0 &&
+    soap.subjective?.medications &&
     soap.subjective.medications.length > 0
   ) {
     recommendations.push({
@@ -227,7 +218,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
 
   // 随伴症状からの追加チェック
   if (
-    soap.subjective.associatedSymptoms &&
+    soap.subjective?.associatedSymptoms &&
     soap.subjective.associatedSymptoms.length > 2
   ) {
     recommendations.push({
@@ -260,11 +251,14 @@ export default function ChatSupportWidget({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedHelpCategory, setSelectedHelpCategory] = useState<string | null>(null);
+  const [windowSize, setWindowSize] = useState({ width: 352, height: 480 });
+  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resizeRef = useRef<{ startX: number; startY: number; startWidth: number; startHeight: number } | null>(null);
 
-  // レコメンドを生成
-  const recommendations = generateRecommendations(soapNote);
+  // レコメンドを生成（メモ化）
+  const recommendations = useMemo(() => generateRecommendations(soapNote), [soapNote]);
 
   // メッセージ追加時に自動スクロール
   useEffect(() => {
@@ -278,12 +272,56 @@ export default function ChatSupportWidget({
     }
   }, [isOpen, activeTab]);
 
+  // リサイズ処理
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: windowSize.width,
+      startHeight: windowSize.height,
+    };
+  }, [windowSize]);
+
+  useEffect(() => {
+    const handleResizeMove = (e: MouseEvent) => {
+      if (!isResizing || !resizeRef.current) return;
+
+      // 左上からリサイズ: 左に引くと幅増、上に引くと高さ増
+      const deltaX = resizeRef.current.startX - e.clientX;
+      const deltaY = resizeRef.current.startY - e.clientY;
+
+      const newWidth = Math.max(288, Math.min(600, resizeRef.current.startWidth + deltaX));
+      const newHeight = Math.max(320, Math.min(800, resizeRef.current.startHeight + deltaY));
+
+      setWindowSize({ width: newWidth, height: newHeight });
+    };
+
+    const handleResizeEnd = () => {
+      setIsResizing(false);
+      resizeRef.current = null;
+    };
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleResizeMove);
+      document.addEventListener("mouseup", handleResizeEnd);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", handleResizeEnd);
+    };
+  }, [isResizing]);
+
   // チャットメッセージ送信
   const sendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
 
+    const generateId = () => Date.now().toString() + Math.random().toString(36).substring(2);
+
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: generateId(),
       role: "user",
       content: inputValue.trim(),
       timestamp: new Date(),
@@ -313,7 +351,7 @@ export default function ChatSupportWidget({
       const data = await response.json();
 
       const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: generateId(),
         role: "assistant",
         content: data.response,
         timestamp: new Date(),
@@ -323,7 +361,7 @@ export default function ChatSupportWidget({
       setMessages((prev) => [...prev, assistantMessage]);
     } catch {
       const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: generateId(),
         role: "assistant",
         content:
           "申し訳ございません。一時的にエラーが発生しました。しばらく経ってから再度お試しください。",
@@ -375,23 +413,39 @@ export default function ChatSupportWidget({
     { id: "general", label: "全般", icon: "💡" },
   ];
 
-  // キーボードイベント
+  // キーボードイベント（日本語IME対応: Shift+Enterで送信）
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    // IME変換中は何もしない
+    if (e.nativeEvent.isComposing) return;
+
+    // Shift + Enter で送信
+    if (e.key === "Enter" && e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
-  // 優先度に応じた色
-  const getPriorityColor = (priority: Recommendation["priority"]) => {
+  // 優先度に応じたカードスタイル（背景・枠線）
+  const getCardStyle = (priority: Recommendation["priority"]) => {
     switch (priority) {
       case "high":
-        return "text-red-500 bg-red-50 dark:bg-red-900/20";
+        return "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-4 border-l-red-500 shadow-sm";
       case "medium":
-        return "text-amber-500 bg-amber-50 dark:bg-amber-900/20";
+        return "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-4 border-l-amber-500 shadow-sm";
       case "low":
-        return "text-green-500 bg-green-50 dark:bg-green-900/20";
+        return "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-4 border-l-emerald-500 shadow-sm";
+    }
+  };
+
+  // 優先度に応じたアイコン色
+  const getIconColor = (priority: Recommendation["priority"]) => {
+    switch (priority) {
+      case "high":
+        return "text-red-500 dark:text-red-400";
+      case "medium":
+        return "text-amber-500 dark:text-amber-400";
+      case "low":
+        return "text-emerald-500 dark:text-emerald-400";
     }
   };
 
@@ -420,11 +474,25 @@ export default function ChatSupportWidget({
 
       {/* チャットウィンドウ */}
       {isOpen && (
-        <div className="chat-support-window">
+        <div
+          className={`chat-support-window ${isResizing ? "is-resizing" : ""}`}
+          style={{ width: windowSize.width, height: windowSize.height }}
+        >
           {/* ヘッダー */}
           <div className="chat-support-header">
+            {/* リサイズボタン（ヘッダー左端） */}
+            <button
+              className="chat-support-resize-btn"
+              onMouseDown={handleResizeStart}
+              title="ドラッグしてリサイズ"
+            >
+              <svg viewBox="0 0 12 12" fill="none">
+                <path d="M1 7V1H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 1L6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
             <div className="flex items-center gap-2">
-              <HeartIcon className="w-5 h-5 text-teal-500" />
+              <HeartIcon className="w-5 h-5 text-white" strokeWidth={2.5} />
               <span className="font-semibold">診療サポート</span>
             </div>
             <div className="flex items-center gap-1 text-xs opacity-70">
@@ -435,7 +503,7 @@ export default function ChatSupportWidget({
                 </span>
               )}
               {isAnalyzing && (
-                <span className="flex items-center gap-1 text-teal-400">
+                <span className="flex items-center gap-1 text-white/90">
                   <ArrowPathIcon className="w-3 h-3 animate-spin" />
                   分析中
                 </span>
@@ -444,13 +512,16 @@ export default function ChatSupportWidget({
           </div>
 
           {/* タブ */}
-          <div className="chat-support-tabs">
+          <div className="chat-support-tabs" role="tablist">
             <button
               onClick={() => setActiveTab("recommendations")}
               className={`chat-support-tab ${activeTab === "recommendations" ? "active" : ""}`}
+              role="tab"
+              aria-selected={activeTab === "recommendations"}
+              aria-controls="panel-recommendations"
             >
-              <SparklesIcon className="w-4 h-4" />
-              レコメンド
+              <SparklesIcon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>推奨</span>
               {recommendations.length > 0 && (
                 <span className="chat-support-tab-badge">{recommendations.length}</span>
               )}
@@ -458,16 +529,22 @@ export default function ChatSupportWidget({
             <button
               onClick={() => setActiveTab("chat")}
               className={`chat-support-tab ${activeTab === "chat" ? "active" : ""}`}
+              role="tab"
+              aria-selected={activeTab === "chat"}
+              aria-controls="panel-chat"
             >
-              <ChatBubbleLeftRightIcon className="w-4 h-4" />
-              チャット
+              <ChatBubbleLeftRightIcon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>チャット</span>
             </button>
             <button
               onClick={() => setActiveTab("help")}
               className={`chat-support-tab ${activeTab === "help" ? "active" : ""}`}
+              role="tab"
+              aria-selected={activeTab === "help"}
+              aria-controls="panel-help"
             >
-              <QuestionMarkCircleIcon className="w-4 h-4" />
-              ヘルプ
+              <QuestionMarkCircleIcon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>ヘルプ</span>
             </button>
           </div>
 
@@ -478,20 +555,20 @@ export default function ChatSupportWidget({
               <div className="chat-support-recommendations">
                 {recommendations.length > 0 ? (
                   <>
-                    <div className="text-xs text-theme-secondary mb-3 px-1">
+                    <div className="text-xs text-slate-600 dark:text-slate-300 mb-3 px-1">
                       問診結果に基づく推奨事項
                     </div>
                     <div className="space-y-2">
                       {recommendations.map((rec) => (
                         <div
                           key={rec.id}
-                          className={`chat-support-recommendation ${getPriorityColor(rec.priority)}`}
+                          className={`chat-support-recommendation ${getCardStyle(rec.priority)}`}
                         >
-                          <div className="flex items-start gap-2">
-                            <rec.icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-3">
+                            <rec.icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${getIconColor(rec.priority)}`} />
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm">{rec.title}</div>
-                              <div className="text-xs opacity-80 mt-1 leading-relaxed">
+                              <div className="font-bold text-sm text-slate-800 dark:text-slate-100">{rec.title}</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                                 {rec.description}
                               </div>
                             </div>
@@ -500,8 +577,8 @@ export default function ChatSupportWidget({
                       ))}
                     </div>
                     {/* クイックアクション */}
-                    <div className="mt-4 pt-3 border-t border-theme-soft">
-                      <div className="text-xs text-theme-secondary mb-2">クイックアクション</div>
+                    <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                      <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">クイックアクション</div>
                       <div className="flex flex-wrap gap-2">
                         {quickActions.map((action) => (
                           <button
@@ -627,9 +704,7 @@ export default function ChatSupportWidget({
                         <span>{topic.question}</span>
                       </summary>
                       <div className="chat-support-faq-answer">
-                        {topic.answer.split("\n").map((line, i) => (
-                          <p key={i}>{line}</p>
-                        ))}
+                        <div className="whitespace-pre-line">{topic.answer}</div>
                       </div>
                     </details>
                   ))}
@@ -655,16 +730,19 @@ export default function ChatSupportWidget({
           {/* 入力エリア（チャットタブのみ） */}
           {activeTab === "chat" && (
             <div className="chat-support-input">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="質問を入力..."
-                className="chat-support-input-field"
-                disabled={isLoading}
-              />
+              <div className="chat-support-input-wrapper">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="質問を入力..."
+                  className="chat-support-input-field"
+                  disabled={isLoading}
+                />
+                <span className="chat-support-input-hint">Shift+Enter で送信</span>
+              </div>
               <button
                 onClick={sendMessage}
                 disabled={!inputValue.trim() || isLoading}
