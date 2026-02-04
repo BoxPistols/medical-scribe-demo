@@ -84,6 +84,7 @@ export default function Home() {
   } | null>(null);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const speechCurrentIndexRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -483,94 +484,196 @@ export default function Home() {
     return text;
   };
 
+  // Helper to play System TTS from a specific index
+  const playSystemTTS = (text: string, startIndex: number = 0) => {
+    // Cancel any ongoing speech first
+    window.speechSynthesis.cancel();
+
+    const textToSpeak = text.substring(startIndex);
+    if (!textToSpeak) {
+      setIsSpeaking(false);
+      speechCurrentIndexRef.current = 0;
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'ja-JP';
+    utterance.rate = speechRate;
+    utterance.pitch = 1.0;
+
+    if (availableVoices.length > 0 && availableVoices[selectedVoiceIndex]) {
+      utterance.voice = availableVoices[selectedVoiceIndex];
+    }
+
+    utterance.onboundary = (event) => {
+      // Update current index (absolute position in original text)
+      // event.charIndex is relative to the text segment being spoken
+      speechCurrentIndexRef.current = startIndex + event.charIndex;
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      speechSynthesisRef.current = null;
+      speechCurrentIndexRef.current = 0;
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      speechSynthesisRef.current = null;
+    };
+
+    speechSynthesisRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
+
+  // Helper to play OpenAI TTS
+  const playOpenAITTS = async (text: string) => {
+    // If we have an existing audio object and just want to replay or it was paused, 
+    // we might want to reuse it, but for voice changes we need to fetch new audio.
+    // For simplicity, we always fetch new audio when this is called explicitly.
+    // Cleanup previous
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: selectedOpenAIVoice }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('TTS Error Details:', errorData);
+        throw new Error(errorData.error || `音声の生成に失敗しました (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      
+      // Apply current speed
+      audio.playbackRate = speechRate;
+      
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        audioRef.current = null;
+        URL.revokeObjectURL(url);
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        audioRef.current = null;
+        URL.revokeObjectURL(url);
+        setError('音声の再生中にエラーが発生しました');
+      };
+
+      await audio.play();
+      setIsSpeaking(true);
+    } catch (e) {
+      console.error(e);
+      setError('AI音声の生成に失敗しました');
+      setIsSpeaking(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleSpeech = async () => {
     if (!result) return;
 
     if (isSpeaking) {
       // Stop speaking
-      if (ttsService === 'system') {
-        window.speechSynthesis.cancel();
-      } else {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current = null;
-        }
+      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
       setIsSpeaking(false);
       speechSynthesisRef.current = null;
     } else {
       const text = extractTextFromSoap(result);
+      speechCurrentIndexRef.current = 0; // Reset position
 
       if (ttsService === 'system') {
-        // Start speaking with System TTS
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ja-JP';
-        utterance.rate = speechRate;
-        utterance.pitch = 1.0;
-
-        // Apply selected voice if available
-        if (availableVoices.length > 0 && availableVoices[selectedVoiceIndex]) {
-          utterance.voice = availableVoices[selectedVoiceIndex];
-        }
-
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          speechSynthesisRef.current = null;
-        };
-
-        utterance.onerror = () => {
-          setIsSpeaking(false);
-          speechSynthesisRef.current = null;
-        };
-
-        speechSynthesisRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
-        setIsSpeaking(true);
+        playSystemTTS(text, 0);
       } else {
-        // Start speaking with OpenAI TTS
-        setLoading(true);
-        try {
-          const res = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, voice: selectedOpenAIVoice }),
-          });
-
-          if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            console.error('TTS Error Details:', errorData);
-            throw new Error(errorData.error || `音声の生成に失敗しました (${res.status})`);
-          }
-
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audioRef.current = audio;
-
-          audio.onended = () => {
-            setIsSpeaking(false);
-            audioRef.current = null;
-            URL.revokeObjectURL(url);
-          };
-
-          audio.onerror = () => {
-            setIsSpeaking(false);
-            audioRef.current = null;
-            URL.revokeObjectURL(url);
-            setError('音声の再生中にエラーが発生しました');
-          };
-
-          await audio.play();
-          setIsSpeaking(true);
-        } catch (e) {
-          console.error(e);
-          setError('AI音声の生成に失敗しました');
-        } finally {
-          setLoading(false);
-        }
+        playOpenAITTS(text);
       }
     }
   };
+
+  // Effect: Handle real-time Speech Rate changes
+  useEffect(() => {
+    if (!isSpeaking || !result) return;
+
+    if (ttsService === 'system') {
+      // Restart System TTS from current position with new rate
+      const text = extractTextFromSoap(result);
+      playSystemTTS(text, speechCurrentIndexRef.current);
+    } else {
+      // Update OpenAI TTS rate directly (no API call needed)
+      if (audioRef.current) {
+        audioRef.current.playbackRate = speechRate;
+      }
+    }
+  }, [speechRate]);
+
+  // Effect: Handle real-time Voice changes (System)
+  useEffect(() => {
+    if (!isSpeaking || !result || ttsService !== 'system') return;
+    
+    // Restart System TTS from current position with new voice
+    const text = extractTextFromSoap(result);
+    playSystemTTS(text, speechCurrentIndexRef.current);
+  }, [selectedVoiceIndex]);
+
+  // Effect: Handle real-time Voice changes (OpenAI)
+  useEffect(() => {
+    if (!isSpeaking || !result || ttsService !== 'openai') return;
+
+    // OpenAI Voice change requires fetching new audio.
+    // We restart from beginning as we can't map text position to audio time easily.
+    const text = extractTextFromSoap(result);
+    playOpenAITTS(text);
+  }, [selectedOpenAIVoice]);
+
+  // Effect: Handle real-time Service switching
+  useEffect(() => {
+    // Only trigger if we are already speaking
+    // This allows switching service while playing
+    // Note: We need a ref to track if we were speaking before the service change caused a re-render
+    // But here we rely on isSpeaking state. 
+    // However, changing service usually doesn't stop isSpeaking, but we need to switch the engine.
+    // Since this effect runs when ttsService changes, we check if we ARE speaking.
+    if (!isSpeaking || !result) return;
+
+    const text = extractTextFromSoap(result);
+    
+    // Stop previous engine
+    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    // Start new engine
+    if (ttsService === 'system') {
+      // Attempt to approximate position? 
+      // OpenAI -> System: Hard to map audio time to text index. Start from 0.
+      // System -> OpenAI: Hard to map text index to audio time. Start from 0.
+      speechCurrentIndexRef.current = 0; 
+      playSystemTTS(text, 0);
+    } else {
+      playOpenAITTS(text);
+    }
+  }, [ttsService]);
 
   // Layout presets
   const setLayoutPreset = (preset: 'equal' | 'left' | 'right') => {
@@ -1107,29 +1210,27 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Speed selection (only for system) */}
-                        {ttsService === 'system' && (
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-2">
-                              読み上げスピード
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                              {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
-                                <button
-                                  key={rate}
-                                  onClick={() => setSpeechRate(rate)}
-                                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                    speechRate === rate
-                                      ? 'bg-teal-600 text-white'
-                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  {rate}x
-                                </button>
-                              ))}
-                            </div>
+                        {/* Speed selection (Common for both System and OpenAI) */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">
+                            読み上げスピード
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
+                              <button
+                                key={rate}
+                                onClick={() => setSpeechRate(rate)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                  speechRate === rate
+                                    ? 'bg-teal-600 text-white'
+                                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {rate}x
+                              </button>
+                            ))}
                           </div>
-                        )}
+                        </div>
 
                         {/* Voice selection (System) */}
                         {ttsService === 'system' && availableVoices.length > 0 && (
