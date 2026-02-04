@@ -1561,8 +1561,8 @@ export default function Home() {
       <header className="app-header flex-shrink-0">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-12 sm:h-14">
-            {/* Branding */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
+            {/* Branding + Clock */}
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-shrink-0">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
                   <MicrophoneIcon
@@ -1580,29 +1580,29 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-            </div>
 
-            {/* Center: Clock and Recording Timer */}
-            {mounted && showClock && (
-              <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-                <time
-                  className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-400 dark:text-gray-500 font-mono tabular-nums"
-                  dateTime={currentTime.toISOString()}
-                  aria-label="現在時刻"
-                  suppressHydrationWarning
-                >
-                  {formatTime(currentTime)}
-                </time>
-                {isRecording && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                    <span className="text-xs sm:text-sm font-mono text-orange-500 tabular-nums">
-                      {formatElapsedTime(recordingElapsed)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
+              {/* Clock and Recording Timer - next to logo */}
+              {mounted && showClock && (
+                <div className="flex flex-col items-center">
+                  <time
+                    className="text-lg sm:text-xl md:text-2xl font-bold text-gray-400 dark:text-gray-500 font-mono tabular-nums"
+                    dateTime={currentTime.toISOString()}
+                    aria-label="現在時刻"
+                    suppressHydrationWarning
+                  >
+                    {formatTime(currentTime)}
+                  </time>
+                  {isRecording && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                      <span className="text-xs font-mono text-orange-500 tabular-nums">
+                        {formatElapsedTime(recordingElapsed)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Status indicator */}
             <div className="hidden sm:flex items-center gap-3">
