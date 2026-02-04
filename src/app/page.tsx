@@ -1282,7 +1282,7 @@ export default function Home() {
 
                 {/* Character count */}
                 {transcript && (
-                  <div className="text-sm text-gray-500 font-mono ml-2">
+                  <div className="text-sm text-theme-tertiary font-mono ml-2">
                     {transcript.length} 文字
                   </div>
                 )}
@@ -1475,18 +1475,18 @@ export default function Home() {
                             </button>
 
                             {showExportMenu && result && (
-                              <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                              <div className="absolute right-0 mt-2 w-40 bg-theme-surface rounded-md shadow-lg border border-theme-glass z-50">
                                 <div className="py-1">
                                   <button
                                     onClick={exportAsJson}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    className="w-full text-left px-3 py-2 text-xs text-theme-primary hover:bg-theme-card flex items-center gap-2"
                                   >
                                     <DocumentIcon className="w-3 h-3" />
                                     JSON
                                   </button>
                                   <button
                                     onClick={exportAsCsv}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    className="w-full text-left px-3 py-2 text-xs text-theme-primary hover:bg-theme-card flex items-center gap-2"
                                   >
                                     <DocumentChartBarIcon className="w-3 h-3" />
                                     CSV
@@ -1553,18 +1553,18 @@ export default function Home() {
 
                             {/* Export menu dropdown */}
                             {showExportMenu && result && (
-                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                              <div className="absolute right-0 mt-2 w-48 bg-theme-surface rounded-md shadow-lg border border-theme-glass z-50">
                                 <div className="py-1">
                                   <button
                                     onClick={exportAsJson}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    className="w-full text-left px-4 py-2 text-sm text-theme-primary hover:bg-theme-card flex items-center gap-2"
                                   >
                                     <DocumentIcon className="w-4 h-4" />
                                     JSON形式
                                   </button>
                                   <button
                                     onClick={exportAsCsv}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    className="w-full text-left px-4 py-2 text-sm text-theme-primary hover:bg-theme-card flex items-center gap-2"
                                   >
                                     <DocumentChartBarIcon className="w-4 h-4" />
                                     CSV形式
@@ -1636,7 +1636,7 @@ export default function Home() {
                                 onClick={() => setSpeechRate(rate)}
                                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                   speechRate === rate
-                                    ? 'bg-teal-600 text-white'
+                                    ? 'bg-theme-active'
                                     : 'bg-theme-surface text-theme-primary border border-theme-border hover:bg-theme-card'
                                 }`}
                               >
@@ -1827,24 +1827,24 @@ export default function Home() {
                           {result.soap.objective?.vitalSigns && (
                             <div>
                               <div className="font-bold text-xs text-theme-secondary mb-2">バイタルサイン</div>
-                              <div className="bg-theme-surface rounded border border-theme-border overflow-hidden">
+                              <div className="rounded border border-theme-soft overflow-hidden">
                                 <table className="w-full text-xs">
-                                  <tbody className="divide-y divide-theme-border">
+                                  <tbody className="divide-y divide-theme-soft">
                                     <tr>
-                                      <td className="px-3 py-2 bg-theme-card font-semibold text-theme-secondary">血圧</td>
-                                      <td className="px-3 py-2 text-theme-primary">{result.soap.objective.vitalSigns.bloodPressure}</td>
+                                      <td className="px-3 py-2 bg-theme-table-header font-semibold text-theme-tertiary">血圧</td>
+                                      <td className="px-3 py-2 text-theme-secondary">{result.soap.objective.vitalSigns.bloodPressure}</td>
                                     </tr>
                                     <tr>
-                                      <td className="px-3 py-2 bg-theme-card font-semibold text-theme-secondary">脈拍</td>
-                                      <td className="px-3 py-2 text-theme-primary">{result.soap.objective.vitalSigns.pulse}</td>
+                                      <td className="px-3 py-2 bg-theme-table-header font-semibold text-theme-tertiary">脈拍</td>
+                                      <td className="px-3 py-2 text-theme-secondary">{result.soap.objective.vitalSigns.pulse}</td>
                                     </tr>
                                     <tr>
-                                      <td className="px-3 py-2 bg-theme-card font-semibold text-theme-secondary">体温</td>
-                                      <td className="px-3 py-2 text-theme-primary">{result.soap.objective.vitalSigns.temperature}</td>
+                                      <td className="px-3 py-2 bg-theme-table-header font-semibold text-theme-tertiary">体温</td>
+                                      <td className="px-3 py-2 text-theme-secondary">{result.soap.objective.vitalSigns.temperature}</td>
                                     </tr>
                                     <tr>
-                                      <td className="px-3 py-2 bg-theme-card font-semibold text-theme-secondary">呼吸数</td>
-                                      <td className="px-3 py-2 text-theme-primary">{result.soap.objective.vitalSigns.respiratoryRate}</td>
+                                      <td className="px-3 py-2 bg-theme-table-header font-semibold text-theme-tertiary">呼吸数</td>
+                                      <td className="px-3 py-2 text-theme-secondary">{result.soap.objective.vitalSigns.respiratoryRate}</td>
                                     </tr>
                                   </tbody>
                                 </table>
@@ -1931,9 +1931,9 @@ export default function Home() {
                               <div className="font-bold text-xs text-theme-secondary mb-2">処方</div>
                               <div className="space-y-2">
                                 {result.soap.plan.medications.map((med, i: number) => (
-                                  <div key={i} className="bg-white rounded border border-gray-300 p-3">
-                                    <div className="font-bold text-sm mb-1">{med.name}</div>
-                                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                                  <div key={i} className="bg-theme-surface rounded border border-theme-glass p-3">
+                                    <div className="font-bold text-sm text-theme-primary mb-1">{med.name}</div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs text-theme-secondary">
                                       <div><span className="font-semibold">用量:</span> {med.dosage}</div>
                                       <div><span className="font-semibold">用法:</span> {med.frequency}</div>
                                       <div><span className="font-semibold">期間:</span> {med.duration}</div>
@@ -1981,8 +1981,8 @@ export default function Home() {
 
           {/* Export Preview Modal */}
           {showExportPreview && exportPreviewData && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-              <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-gray-200/50 dark:border-gray-700/50">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-overlay backdrop-blur-sm">
+              <div className="bg-theme-modal backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-theme-modal">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border bg-theme-modal-header rounded-t-2xl">
                   <h3 className="text-lg font-semibold text-theme-primary">
@@ -2018,7 +2018,7 @@ export default function Home() {
                       setShowExportPreview(false);
                       setExportPreviewData(null);
                     }}
-                    className="px-4 py-2 text-sm font-medium text-theme-primary bg-white/50 dark:bg-gray-800/50 border border-theme-border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-theme-primary bg-theme-interactive border border-theme-border rounded-md hover:bg-theme-interactive-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
                   >
                     キャンセル
                   </button>
@@ -2037,8 +2037,8 @@ export default function Home() {
 
           {/* Help Modal */}
           {showHelp && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-              <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200/50 dark:border-gray-700/50">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-overlay backdrop-blur-sm">
+              <div className="bg-theme-modal backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-theme-modal">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border bg-theme-modal-header rounded-t-2xl">
                   <div className="flex items-center gap-3">
@@ -2219,12 +2219,12 @@ export default function Home() {
 
           {/* Shortcuts Modal */}
           {showShortcutsModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-              <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-gray-200/50 dark:border-gray-700/50">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-overlay backdrop-blur-sm">
+              <div className="bg-theme-modal backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-theme-modal">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-t-2xl">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border bg-theme-modal-header rounded-t-2xl">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-theme-card flex items-center justify-center">
                       <KeyboardIcon className="w-6 h-6 text-theme-primary" />
                     </div>
                     <div>
@@ -2253,35 +2253,35 @@ export default function Home() {
                       const platformDefault = getPlatformDefaultShortcuts()[def.id];
                       
                       return (
-                        <div 
+                        <div
                           key={def.id}
                           className={`flex items-center justify-between px-6 py-4 transition-colors ${
-                            isEditing 
-                              ? 'bg-teal-50 dark:bg-teal-900/20' 
-                              : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                            isEditing
+                              ? 'bg-theme-highlight'
+                              : 'hover:bg-theme-card'
                           }`}
                         >
                           <span className="text-sm font-medium text-theme-primary">{def.label}</span>
-                          
+
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => setEditingShortcutId(def.id)}
                               className={`
                                 min-w-[120px] px-3 py-1.5 rounded-md text-sm font-mono border transition-all
                                 ${isEditing
-                                  ? 'bg-white dark:bg-gray-800 border-teal-500 text-teal-600 dark:text-teal-400 ring-2 ring-teal-500/20'
-                                  : 'bg-gray-100 dark:bg-gray-800 border-transparent text-theme-primary hover:border-gray-300 dark:hover:border-gray-600'
+                                  ? 'bg-theme-surface border-teal-500 text-theme-accent ring-2 ring-teal-500/20'
+                                  : 'bg-theme-card border-transparent text-theme-primary hover:border-theme-light'
                                 }
                               `}
                             >
                               {isEditing ? 'キーを入力...' : formatShortcut(current)}
                             </button>
-                            
+
                             {/* Reset individual shortcut if changed from platform default */}
                             {JSON.stringify(current) !== JSON.stringify(platformDefault) && (
                               <button
                                 onClick={() => handleShortcutChange(def.id, platformDefault)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                className="p-1.5 text-theme-tertiary hover:text-red-500 transition-colors"
                                 title="デフォルトに戻す"
                               >
                                 <ArrowLeftIcon className="w-4 h-4" />
@@ -2295,7 +2295,7 @@ export default function Home() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-theme-border bg-gray-50/50 dark:bg-gray-800/30 flex justify-between items-center">
+                <div className="px-6 py-4 border-t border-theme-border bg-theme-modal-footer flex justify-between items-center">
                   <button
                     onClick={handleResetSettings}
                     className="text-xs text-theme-tertiary hover:text-red-500 flex items-center gap-1 transition-colors"
@@ -2318,8 +2318,8 @@ export default function Home() {
           )}
 
           {/* Footer disclaimer */}
-          <footer className={`mt-4 pt-3 border-t border-gray-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs text-gray-500">
+          <footer className={`mt-4 pt-3 border-t border-theme-soft ${mounted ? 'animate-fade-in' : 'opacity-0'}`}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs text-theme-tertiary">
               <div className="font-mono">Next.js 14 / OpenAI API / Web Speech API で構築</div>
               <div className="flex items-center gap-1.5 text-amber-600 font-semibold">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
