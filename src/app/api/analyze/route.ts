@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 import { SYSTEM_PROMPT } from './prompt';
 import type { SoapNote } from './types';
 
+const OPENAI_MODEL = 'gpt-4o-mini';
+
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY環境変数が設定されていません');
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
     // ストリーミングモード
     if (useStream) {
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text },
@@ -68,7 +70,7 @@ export async function POST(req: Request) {
 
     // 非ストリーミングモード（従来の動作）
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: OPENAI_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: text },
