@@ -2080,22 +2080,18 @@ export default function Home() {
                         </div>
                       </div>
                     ) : (
-                      <div className="w-full flex items-center justify-between gap-2">
-                        <h2 className="panel-title whitespace-nowrap">SOAPカルテ</h2>
+                      <div className="w-full flex items-center justify-between gap-1">
+                        <h2 className="panel-title whitespace-nowrap text-sm">カルテ</h2>
                         {/* アクションボタン群 */}
-                        <div className="flex items-center flex-wrap gap-1">
+                        <div className="flex items-center gap-0.5">
                           {/* Import button */}
                           <button
                             onClick={handleImportClick}
-                            className="btn btn-secondary text-xs py-1 px-2"
+                            className="btn btn-secondary text-xs py-0.5 px-1.5"
                             aria-label="カルテをインポート"
-                            data-tooltip="JSON形式でカルテをインポート"
+                            data-tooltip="インポート"
                           >
-                            <ArrowUpTrayIcon
-                              className="w-4 h-4"
-                              aria-hidden="true"
-                            />
-                            <span className="hidden sm:inline">Import</span>
+                            <ArrowUpTrayIcon className="w-3.5 h-3.5" aria-hidden="true" />
                           </button>
 
                           {/* Export dropdown */}
@@ -2103,17 +2099,13 @@ export default function Home() {
                             <button
                               onClick={() => setShowExportMenu(!showExportMenu)}
                               disabled={!result}
-                              className="btn btn-secondary text-xs py-1 px-2"
+                              className="btn btn-secondary text-xs py-0.5 px-1.5"
                               aria-label="カルテをエクスポート"
-                              data-tooltip="JSON/CSV形式でエクスポート"
+                              data-tooltip="エクスポート"
                             >
-                              <ArrowDownTrayIcon
-                                className="w-4 h-4"
-                                aria-hidden="true"
-                              />
-                              <span className="hidden sm:inline">Export</span>
+                              <ArrowDownTrayIcon className="w-3.5 h-3.5" aria-hidden="true" />
                               <ChevronDownIcon
-                                className={`w-3 h-3 ml-1 transition-transform ${
+                                className={`w-3 h-3 transition-transform ${
                                   showExportMenu ? "rotate-180" : ""
                                 }`}
                                 aria-hidden="true"
@@ -2146,72 +2138,37 @@ export default function Home() {
                           <button
                             onClick={toggleSpeech}
                             disabled={!result}
-                            className="btn btn-secondary text-xs py-1 px-2"
-                            aria-label={
-                              isSpeaking ? "読み上げを停止" : "カルテを読み上げ"
-                            }
-                            data-tooltip={
-                              isSpeaking
-                                ? "読み上げ停止"
-                                : "カルテを音声で読み上げ"
-                            }
+                            className="btn btn-secondary text-xs py-0.5 px-1.5"
+                            aria-label={isSpeaking ? "読み上げを停止" : "カルテを読み上げ"}
+                            data-tooltip={`読み上げ [${formatShortcut(shortcuts.toggleSpeech, true)}]`}
                           >
                             {isSpeaking ? (
-                              <>
-                                <StopIconSolid
-                                  className="w-4 h-4"
-                                  aria-hidden="true"
-                                />
-                                Stop
-                                <span className="opacity-70 ml-1">
-                                  [
-                                  {formatShortcut(shortcuts.toggleSpeech, true)}
-                                  ]
-                                </span>
-                              </>
+                              <StopIconSolid className="w-3.5 h-3.5" aria-hidden="true" />
                             ) : (
-                              <>
-                                <SpeakerWaveIcon
-                                  className="w-4 h-4"
-                                  aria-hidden="true"
-                                />
-                                Voice
-                                <span className="opacity-70 ml-1">
-                                  [
-                                  {formatShortcut(shortcuts.toggleSpeech, true)}
-                                  ]
-                                </span>
-                              </>
+                              <SpeakerWaveIcon className="w-3.5 h-3.5" aria-hidden="true" />
                             )}
                           </button>
                           <button
-                            onClick={() =>
-                              setShowSpeechSettings(!showSpeechSettings)
-                            }
+                            onClick={() => setShowSpeechSettings(!showSpeechSettings)}
                             disabled={!result}
-                            className="btn btn-secondary text-xs p-1.5"
+                            className="btn btn-secondary text-xs p-1"
                             aria-label="音声設定"
-                            data-tooltip="音声・速度設定"
+                            data-tooltip="音声設定"
                           >
                             <ChevronDownIcon
-                              className={`w-4 h-4 transition-transform ${
-                                showSpeechSettings ? "rotate-180" : ""
-                              }`}
+                              className={`w-3 h-3 transition-transform ${showSpeechSettings ? "rotate-180" : ""}`}
                               aria-hidden="true"
                             />
                           </button>
-                          {/* 区切り */}
-                          <div className="w-px h-4 bg-theme-border mx-1" />
-                          {/* Copy full chart button */}
+                          {/* Copy button */}
                           <button
                             onClick={copyFullChart}
                             disabled={!result}
-                            className="btn btn-secondary text-xs py-1 px-2"
+                            className="btn btn-secondary text-xs py-0.5 px-1.5"
                             aria-label="カルテ全体をコピー"
-                            data-tooltip="カルテ全体をクリップボードにコピー"
+                            data-tooltip="コピー"
                           >
-                            <ClipboardDocumentIcon className="w-4 h-4" aria-hidden="true" />
-                            <span className="hidden sm:inline">コピー</span>
+                            <ClipboardDocumentIcon className="w-3.5 h-3.5" aria-hidden="true" />
                           </button>
                         </div>
                       </div>

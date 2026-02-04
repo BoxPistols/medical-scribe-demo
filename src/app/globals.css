@@ -394,7 +394,7 @@ body::after {
 
 .panel-header {
   position: relative;
-  padding: 1.25rem 1.5rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--glass-border);
   background: var(--glass-bg-strong);
   backdrop-filter: blur(12px);
