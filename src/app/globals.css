@@ -835,6 +835,54 @@ body::after {
   border-color: rgba(239, 68, 68, 0.4);
 }
 
+/* App header with theme support */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.app-header .max-w-\[1600px\] {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Resize handle styles with theme support */
+.resize-handle-line {
+  width: 0.25rem;
+  height: 100%;
+  background: var(--border-light);
+  transition: all 0.2s ease;
+  border-radius: 9999px;
+}
+
+.group:hover .resize-handle-line {
+  background: var(--accent-primary);
+  width: 0.375rem;
+  box-shadow: 0 0 12px var(--accent-primary);
+}
+
+.resize-handle-dot {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.group:hover .resize-handle-dot {
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary);
+  transform: scale(1.5);
+}
+
 /* Responsive utilities */
 @media (max-width: 1024px) {
   body {
