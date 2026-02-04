@@ -190,20 +190,22 @@ const getPlatformDefaultShortcuts = (useModifiers: boolean = false): Record<Acti
 };
 
 // Shortcut helper
-const formatShortcut = (shortcut: ShortcutKey | undefined): string => {
+const formatShortcut = (shortcut: ShortcutKey | undefined, compact: boolean = false): string => {
   if (!shortcut) return '-';
 
+  const isMac = isMacPlatform();
   const parts = [];
-  if (shortcut.meta) parts.push('Win'); // Display as Win for generic, but UI can detect OS
-  if (shortcut.ctrl) parts.push('Ctrl');
-  if (shortcut.alt) parts.push('Alt');
+
+  if (shortcut.meta) parts.push(isMac ? (compact ? 'Cmd' : 'Cmd') : 'Win');
+  if (shortcut.ctrl) parts.push(isMac ? (compact ? 'Cmd' : 'Cmd') : 'Ctrl');
+  if (shortcut.alt) parts.push(isMac ? 'Opt' : 'Alt');
   if (shortcut.shift) parts.push('Shift');
 
   let keyDisplay = shortcut.key.toUpperCase();
   if (keyDisplay === ' ') keyDisplay = 'Space';
   parts.push(keyDisplay);
 
-  return parts.join(' + ');
+  return compact ? parts.join('+') : parts.join(' + ');
 };
 
 export default function Home() {
@@ -345,7 +347,7 @@ export default function Home() {
   }, [useModifiers]); // Re-load defaults when useModifiers changes
 
   useEffect(() => {
-    localStorage.setItem('medical-scribe-shortcuts-v3', JSON.stringify(shortcuts));
+    localStorage.setItem('medical-scribe-shortcuts-v4', JSON.stringify(shortcuts));
   }, [shortcuts]);
 
   // Close shortcuts modal with Escape key
@@ -625,6 +627,7 @@ export default function Home() {
       setShortcuts(defaults);
       localStorage.removeItem('medical-scribe-shortcuts-v2');
       localStorage.removeItem('medical-scribe-shortcuts-v3');
+      localStorage.removeItem('medical-scribe-shortcuts-v4');
 
       setSpeechRate(1.0);
       setSelectedVoiceIndex(0);
@@ -634,8 +637,8 @@ export default function Home() {
   const handleUseModifiersChange = (enabled: boolean) => {
     setUseModifiers(enabled);
     // When toggling, reset shortcuts to the defaults for that mode
-    // This overrides any custom shortcuts, which is safer when switching modes
-    // But we could try to preserve custom ones if we wanted to be fancy
+    // Clear localStorage so useEffect doesn't restore old shortcuts
+    localStorage.removeItem('medical-scribe-shortcuts-v4');
     const defaults = getPlatformDefaultShortcuts(enabled);
     setShortcuts(defaults);
   };
@@ -1390,7 +1393,6 @@ export default function Home() {
                   aria-label={isRecording ? '録音を停止' : '録音を開始'}
                   aria-pressed={isRecording}
                   data-tooltip={isRecording ? '録音を停止' : '音声入力を開始'}
-                  title={`録音を開始/停止 (R)`}
                 >
                   {isRecording ? (
                     <StopIcon className="w-4 h-4" aria-hidden="true" />
@@ -1398,6 +1400,7 @@ export default function Home() {
                     <MicrophoneIcon className="w-4 h-4" aria-hidden="true" />
                   )}
                   {isRecording ? '停止' : '録音'}
+                  <span className="text-xs opacity-70 ml-1">[{formatShortcut(shortcuts.toggleRecording, true)}]</span>
                 </button>
                 <button
                   onClick={handleAnalyze}
@@ -1405,7 +1408,6 @@ export default function Home() {
                   className="btn btn-primary"
                   aria-label="SOAPカルテを生成"
                   data-tooltip="AIでSOAP形式カルテを生成"
-                  title="AIでカルテを生成 (A)"
                 >
                   {loading ? (
                     <>
@@ -1416,6 +1418,7 @@ export default function Home() {
                     <>
                       <SparklesIcon className="w-4 h-4" aria-hidden="true" />
                       カルテ生成
+                      <span className="text-xs opacity-70 ml-1">[{formatShortcut(shortcuts.analyze, true)}]</span>
                     </>
                   )}
                 </button>
@@ -1435,10 +1438,10 @@ export default function Home() {
                 className="btn btn-secondary"
                 aria-label="すべてクリア"
                 data-tooltip="入力とカルテをすべて削除"
-                title="入力内容と結果をクリア (C)"
               >
                 <TrashIcon className="w-4 h-4" aria-hidden="true" />
                 クリア
+                <span className="text-xs opacity-70 ml-1">[{formatShortcut(shortcuts.clear, true)}]</span>
               </button>
             </div>
           </div>
@@ -1466,7 +1469,6 @@ export default function Home() {
                       <h2 className="panel-title">会話テキスト</h2>
                       {/* Shortcut mode toggle */}
                       <div className="flex items-center gap-1.5 text-xs text-theme-secondary">
-                        <span className="hidden sm:inline">ショートカット</span>
                         <button
                           onClick={() => handleUseModifiersChange(!useModifiers)}
                           className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 ${
@@ -1483,11 +1485,12 @@ export default function Home() {
                             }`}
                           />
                         </button>
-                        <span className="font-mono bg-theme-highlight px-1 rounded">
-                          {useModifiers ? 'Cmd+R' : 'R'}
-                        </span>
-                        <span className="hidden md:inline text-theme-tertiary">
-                          {useModifiers ? '入力中も有効' : '入力中は無効'}
+                        <span className="text-theme-tertiary">
+                          {useModifiers ? (
+                            <>テキスト入力中も <span className="font-mono bg-theme-highlight px-1 rounded">{formatShortcut(shortcuts.toggleRecording, true)}</span> 等で操作可</>
+                          ) : (
+                            <>単キー <span className="font-mono bg-theme-highlight px-1 rounded">{formatShortcut(shortcuts.toggleRecording, true)}</span> (入力中は無効)</>
+                          )}
                         </span>
                       </div>
                     </div>
