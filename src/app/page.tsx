@@ -1566,19 +1566,31 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="w-full space-y-3">
-                        {/* 上段: 見出し */}
-                        <h2 className="panel-title">AI生成SOAPカルテ</h2>
+                        {/* 上段: 見出しとCopyボタン */}
+                        <div className="flex items-center justify-between">
+                          <h2 className="panel-title">AI生成SOAPカルテ</h2>
+                          {/* Copy full chart button */}
+                          <button
+                            onClick={copyFullChart}
+                            disabled={!result}
+                            className="flex items-center gap-1.5 text-xs text-theme-secondary hover:text-theme-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="カルテ全体をコピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" aria-hidden="true" />
+                            <span>全体コピー</span>
+                          </button>
+                        </div>
                         {/* 下段: アクションボタン群 */}
-                        <div className="flex items-center flex-wrap gap-2">
+                        <div className="flex items-center flex-wrap gap-1.5">
                           {/* Import button */}
                           <button
                             onClick={handleImportClick}
-                            className="btn btn-secondary text-xs py-1.5 px-3"
+                            className="btn btn-secondary text-xs py-1 px-2"
                             aria-label="カルテをインポート"
                             data-tooltip="JSON形式でカルテをインポート"
                           >
                             <ArrowUpTrayIcon className="w-4 h-4" aria-hidden="true" />
-                            <span className="hidden sm:inline">インポート</span>
+                            <span className="hidden sm:inline">Import</span>
                           </button>
 
                           {/* Export dropdown */}
@@ -1586,66 +1598,54 @@ export default function Home() {
                             <button
                               onClick={() => setShowExportMenu(!showExportMenu)}
                               disabled={!result}
-                              className="btn btn-secondary text-xs py-1.5 px-3"
+                              className="btn btn-secondary text-xs py-1 px-2"
                               aria-label="カルテをエクスポート"
                               data-tooltip="JSON/CSV形式でエクスポート"
                             >
                               <ArrowDownTrayIcon className="w-4 h-4" aria-hidden="true" />
-                              <span className="hidden sm:inline">エクスポート</span>
+                              <span className="hidden sm:inline">Export</span>
                               <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
                             </button>
 
                             {/* Export menu dropdown */}
                             {showExportMenu && result && (
-                              <div className="absolute right-0 mt-2 w-48 bg-theme-surface rounded-md shadow-lg border border-theme-glass z-50">
+                              <div className="absolute right-0 mt-2 w-40 bg-theme-surface rounded-md shadow-lg border border-theme-glass z-50">
                                 <div className="py-1">
                                   <button
                                     onClick={exportAsJson}
                                     className="w-full text-left px-4 py-2 text-sm text-theme-primary hover:bg-theme-card flex items-center gap-2"
                                   >
                                     <DocumentIcon className="w-4 h-4" />
-                                    JSON形式
+                                    JSON
                                   </button>
                                   <button
                                     onClick={exportAsCsv}
                                     className="w-full text-left px-4 py-2 text-sm text-theme-primary hover:bg-theme-card flex items-center gap-2"
                                   >
                                     <DocumentChartBarIcon className="w-4 h-4" />
-                                    CSV形式
+                                    CSV
                                   </button>
                                 </div>
                               </div>
                             )}
                           </div>
 
-                          {/* Copy full chart button */}
-                          <button
-                            onClick={copyFullChart}
-                            disabled={!result}
-                            className="btn btn-secondary text-xs py-1.5 px-3"
-                            aria-label="カルテ全体をコピー"
-                            data-tooltip="カルテ全体をクリップボードにコピー"
-                          >
-                            <ClipboardDocumentIcon className="w-4 h-4" aria-hidden="true" />
-                            <span className="hidden sm:inline">コピー</span>
-                          </button>
-
                           <button
                             onClick={toggleSpeech}
                             disabled={!result}
-                            className="btn btn-secondary text-xs py-1.5 px-3"
+                            className="btn btn-secondary text-xs py-1 px-2"
                             aria-label={isSpeaking ? '読み上げを停止' : 'カルテを読み上げ'}
                             data-tooltip={isSpeaking ? '読み上げ停止' : 'カルテを音声で読み上げ'}
                           >
                             {isSpeaking ? (
                               <>
                                 <StopIconSolid className="w-4 h-4" aria-hidden="true" />
-                                停止
+                                Stop
                               </>
                             ) : (
                               <>
                                 <SpeakerWaveIcon className="w-4 h-4" aria-hidden="true" />
-                                読み上げ
+                                Voice
                               </>
                             )}
                           </button>
