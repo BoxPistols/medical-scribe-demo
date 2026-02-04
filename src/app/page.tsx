@@ -150,10 +150,18 @@ interface IWindow extends Window {
   SpeechRecognition: SpeechRecognitionConstructor;
 }
 
+// Helper to detect platform
+const isMacPlatform = (): boolean => {
+  if (typeof navigator === 'undefined') return false;
+  // Check both userAgent and platform for better compatibility
+  return /Mac|iPod|iPhone|iPad/.test(navigator.platform) ||
+         /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+};
+
 // Helper to get platform-specific defaults
 const getPlatformDefaultShortcuts = (): Record<ActionId, ShortcutKey> => {
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-  
+  const isMac = isMacPlatform();
+
   return SHORTCUT_DEFS.reduce((acc, def) => {
     const key = { ...def.default };
     // Swap Ctrl for Meta on Mac for primary actions defined with Ctrl
@@ -166,17 +174,19 @@ const getPlatformDefaultShortcuts = (): Record<ActionId, ShortcutKey> => {
 };
 
 // Shortcut helper
-const formatShortcut = (shortcut: ShortcutKey): string => {
+const formatShortcut = (shortcut: ShortcutKey | undefined): string => {
+  if (!shortcut) return '-';
+
   const parts = [];
   if (shortcut.meta) parts.push('Win'); // Display as Win for generic, but UI can detect OS
   if (shortcut.ctrl) parts.push('Ctrl');
   if (shortcut.alt) parts.push('Alt');
   if (shortcut.shift) parts.push('Shift');
-  
+
   let keyDisplay = shortcut.key.toUpperCase();
   if (keyDisplay === ' ') keyDisplay = 'Space';
   parts.push(keyDisplay);
-  
+
   return parts.join(' + ');
 };
 
@@ -285,7 +295,21 @@ export default function Home() {
     const savedShortcuts = localStorage.getItem('medical-scribe-shortcuts-v3');
     if (savedShortcuts) {
       try {
-        setShortcuts(JSON.parse(savedShortcuts));
+        const parsed = JSON.parse(savedShortcuts);
+        // Merge saved shortcuts with defaults to ensure all actions have a shortcut
+        const simpleDefaults = SHORTCUT_DEFS.reduce((acc, def) => {
+          return {
+            ...acc,
+            [def.id]: {
+              ...def.default,
+              ctrl: false,
+              alt: false,
+              shift: false,
+              meta: false
+            }
+          };
+        }, {} as Record<ActionId, ShortcutKey>);
+        setShortcuts({ ...simpleDefaults, ...parsed });
       } catch (e) {
         console.error('Failed to parse shortcuts:', e);
       }
@@ -2268,7 +2292,7 @@ export default function Home() {
                   <div className="divide-y divide-theme-soft">
                     {SHORTCUT_DEFS.map((def) => {
                       const isEditing = editingShortcutId === def.id;
-                      const current = shortcuts[def.id];
+                      const current = shortcuts[def.id] || def.default;
                       // Calculate platform default for this specific action
                       const platformDefault = getPlatformDefaultShortcuts()[def.id];
                       
