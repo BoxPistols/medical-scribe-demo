@@ -79,30 +79,43 @@ interface ShortcutKey {
   meta?: boolean; // Windows key on Windows
 }
 
+type ShortcutGroup = 'basic' | 'speech' | 'file' | 'theme' | 'layout' | 'other';
+
 interface ShortcutDef {
   id: ActionId;
   label: string;
   default: ShortcutKey;
+  modifierDefault?: ShortcutKey;
+  group: ShortcutGroup;
 }
 
+const SHORTCUT_GROUPS: { id: ShortcutGroup; label: string }[] = [
+  { id: 'basic', label: '基本操作' },
+  { id: 'speech', label: '音声読み上げ' },
+  { id: 'file', label: 'ファイル' },
+  { id: 'theme', label: 'テーマ' },
+  { id: 'layout', label: 'レイアウト' },
+  { id: 'other', label: 'その他' },
+];
+
 const SHORTCUT_DEFS: ShortcutDef[] = [
-  { id: 'toggleRecording', label: '録音開始/停止', default: { key: 'r' } },
-  { id: 'analyze', label: 'カルテ生成', default: { key: 'a' } },
-  { id: 'clear', label: 'すべてクリア', default: { key: 'c' } },
-  { id: 'toggleSpeech', label: '読み上げ開始/停止', default: { key: 's' } },
-  { id: 'increaseSpeechRate', label: '読み上げ速度を上げる', default: { key: '=' } },
-  { id: 'decreaseSpeechRate', label: '読み上げ速度を下げる', default: { key: '-' } },
-  { id: 'import', label: 'インポート', default: { key: 'i' } },
-  { id: 'exportJson', label: 'JSONエクスポート', default: { key: 'j' } },
-  { id: 'exportCsv', label: 'CSVエクスポート', default: { key: 'e' } },
-  { id: 'themeLight', label: 'テーマ: ライト', default: { key: 'l' } },
-  { id: 'themeDark', label: 'テーマ: ダーク', default: { key: 'd' } },
-  { id: 'themeSystem', label: 'テーマ: 自動', default: { key: 'm' } },
-  { id: 'layoutLeft', label: 'レイアウト: 左重視', default: { key: '1' } },
-  { id: 'layoutEqual', label: 'レイアウト: 均等', default: { key: '2' } },
-  { id: 'layoutRight', label: 'レイアウト: 右重視', default: { key: '3' } },
-  { id: 'toggleSettings', label: 'ショートカット設定', default: { key: 'k' } },
-  { id: 'toggleHelp', label: 'ヘルプ', default: { key: 'h' } },
+  { id: 'toggleRecording', label: '録音開始/停止', default: { key: 'r' }, modifierDefault: { key: 'r', ctrl: true }, group: 'basic' },
+  { id: 'analyze', label: 'カルテ生成', default: { key: 'a' }, modifierDefault: { key: 'a', ctrl: true }, group: 'basic' },
+  { id: 'clear', label: 'すべてクリア', default: { key: 'c' }, group: 'basic' },
+  { id: 'toggleSpeech', label: '開始/停止', default: { key: 's' }, group: 'speech' },
+  { id: 'increaseSpeechRate', label: '速度を上げる', default: { key: '=' }, group: 'speech' },
+  { id: 'decreaseSpeechRate', label: '速度を下げる', default: { key: '-' }, group: 'speech' },
+  { id: 'import', label: 'インポート', default: { key: 'i' }, group: 'file' },
+  { id: 'exportJson', label: 'JSON', default: { key: 'j' }, group: 'file' },
+  { id: 'exportCsv', label: 'CSV', default: { key: 'e' }, group: 'file' },
+  { id: 'themeLight', label: 'ライト', default: { key: 'l' }, group: 'theme' },
+  { id: 'themeDark', label: 'ダーク', default: { key: 'd' }, group: 'theme' },
+  { id: 'themeSystem', label: '自動', default: { key: 'm' }, group: 'theme' },
+  { id: 'layoutLeft', label: '左重視', default: { key: '1' }, group: 'layout' },
+  { id: 'layoutEqual', label: '均等', default: { key: '2' }, group: 'layout' },
+  { id: 'layoutRight', label: '右重視', default: { key: '3' }, group: 'layout' },
+  { id: 'toggleSettings', label: 'ショートカット設定', default: { key: 'k' }, group: 'other' },
+  { id: 'toggleHelp', label: 'ヘルプ', default: { key: 'h' }, group: 'other' },
 ];
 
 // Constants
@@ -159,12 +172,15 @@ const isMacPlatform = (): boolean => {
 };
 
 // Helper to get platform-specific defaults
-const getPlatformDefaultShortcuts = (): Record<ActionId, ShortcutKey> => {
+const getPlatformDefaultShortcuts = (useModifiers: boolean = false): Record<ActionId, ShortcutKey> => {
   const isMac = isMacPlatform();
 
   return SHORTCUT_DEFS.reduce((acc, def) => {
-    const key = { ...def.default };
-    // Swap Ctrl for Meta on Mac for primary actions defined with Ctrl
+    // If useModifiers is true and a modifierDefault exists, use it. Otherwise use default.
+    const sourceKey = (useModifiers && def.modifierDefault) ? def.modifierDefault : def.default;
+    const key = { ...sourceKey };
+    
+    // Swap Ctrl for Meta on Mac for actions defined with Ctrl
     if (isMac && key.ctrl) {
       key.ctrl = false;
       key.meta = true;
@@ -234,8 +250,9 @@ export default function Home() {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
   // Shortcuts state
+  const [useModifiers, setUseModifiers] = useState(true); // Default to true (Command+R etc)
   const [shortcuts, setShortcuts] = useState<Record<ActionId, ShortcutKey>>(() => {
-    // Initial state loading will be handled in useEffect to access localStorage
+    // Initial state will be updated in useEffect
     return SHORTCUT_DEFS.reduce((acc, def) => ({ ...acc, [def.id]: def.default }), {} as Record<ActionId, ShortcutKey>);
   });
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
@@ -254,7 +271,18 @@ export default function Home() {
     if (savedTheme) {
       setTheme(savedTheme);
     }
+    
+    // Load modifier setting
+    const savedUseModifiers = localStorage.getItem('medical-scribe-use-modifiers');
+    if (savedUseModifiers !== null) {
+      setUseModifiers(savedUseModifiers === 'true');
+    }
   }, []);
+
+  // Save modifier setting
+  useEffect(() => {
+    localStorage.setItem('medical-scribe-use-modifiers', String(useModifiers));
+  }, [useModifiers]);
 
   // Theme management - Apply theme
   useEffect(() => {
@@ -290,51 +318,30 @@ export default function Home() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
-  // Shortcuts management - Load/Save (v3: simple single-key shortcuts only)
+  // Shortcuts management - Load/Save
   useEffect(() => {
-    // Clear old legacy shortcuts to force simple defaults
+    // Clear old legacy shortcuts
     localStorage.removeItem('medical-scribe-shortcuts');
     localStorage.removeItem('medical-scribe-shortcuts-v2');
 
     const savedShortcuts = localStorage.getItem('medical-scribe-shortcuts-v3');
+    const defaults = getPlatformDefaultShortcuts(useModifiers);
+
     if (savedShortcuts) {
       try {
         const parsed = JSON.parse(savedShortcuts);
         // Merge saved shortcuts with defaults to ensure all actions have a shortcut
-        const simpleDefaults = SHORTCUT_DEFS.reduce((acc, def) => {
-          return {
-            ...acc,
-            [def.id]: {
-              ...def.default,
-              ctrl: false,
-              alt: false,
-              shift: false,
-              meta: false
-            }
-          };
-        }, {} as Record<ActionId, ShortcutKey>);
-        setShortcuts({ ...simpleDefaults, ...parsed });
+        // If the saved shortcuts don't match the current mode (modifiers vs simple), we might want to reset
+        // For now, we trust the user's saved preferences if they exist, but apply defaults for missing keys
+        setShortcuts({ ...defaults, ...parsed });
       } catch (e) {
         console.error('Failed to parse shortcuts:', e);
+        setShortcuts(defaults);
       }
     } else {
-      // Apply simple defaults (no modifiers, just single keys)
-      const simpleDefaults = SHORTCUT_DEFS.reduce((acc, def) => {
-        return {
-          ...acc,
-          [def.id]: {
-            ...def.default,
-            // Explicitly set all modifiers to false for simple single-key shortcuts
-            ctrl: false,
-            alt: false,
-            shift: false,
-            meta: false
-          }
-        };
-      }, {} as Record<ActionId, ShortcutKey>);
-      setShortcuts(simpleDefaults);
+      setShortcuts(defaults);
     }
-  }, []);
+  }, [useModifiers]); // Re-load defaults when useModifiers changes
 
   useEffect(() => {
     localStorage.setItem('medical-scribe-shortcuts-v3', JSON.stringify(shortcuts));
@@ -609,13 +616,27 @@ export default function Home() {
       localStorage.removeItem('medical-scribe-theme');
       
       // Reset shortcuts with platform defaults
-      const defaults = getPlatformDefaultShortcuts();
+      // Default to useModifiers = true on reset as per requirement
+      setUseModifiers(true);
+      localStorage.setItem('medical-scribe-use-modifiers', 'true');
+      
+      const defaults = getPlatformDefaultShortcuts(true);
       setShortcuts(defaults);
       localStorage.removeItem('medical-scribe-shortcuts-v2');
+      localStorage.removeItem('medical-scribe-shortcuts-v3');
 
       setSpeechRate(1.0);
       setSelectedVoiceIndex(0);
     }
+  };
+
+  const handleUseModifiersChange = (enabled: boolean) => {
+    setUseModifiers(enabled);
+    // When toggling, reset shortcuts to the defaults for that mode
+    // This overrides any custom shortcuts, which is safer when switching modes
+    // But we could try to preserve custom ones if we wanted to be fancy
+    const defaults = getPlatformDefaultShortcuts(enabled);
+    setShortcuts(defaults);
   };
 
   const handleShortcutChange = (id: ActionId, key: ShortcutKey) => {
@@ -1112,11 +1133,9 @@ export default function Home() {
   // Keyboard shortcuts listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input or textarea
+      // Check if user is typing
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
       // Ignore if editing a shortcut
       if (editingShortcutId) return;
@@ -1134,6 +1153,20 @@ export default function Home() {
       });
 
       if (actionId) {
+        // Validation for input fields:
+        // If in input/textarea, ONLY allow shortcuts that use modifiers (Ctrl/Alt/Meta)
+        // AND specifically allow the user's requested actions even in inputs
+        const s = shortcuts[actionId];
+        const hasModifier = s.ctrl || s.alt || s.meta;
+        
+        if (isInput && !hasModifier) {
+          // If typing and shortcut has no modifiers, ignore shortcut to allow typing
+          return;
+        }
+
+        // Prevent default browser actions for specific shortcuts that conflict
+        // e.g., Cmd+R (Reload) or Cmd+A (Select All) if they are mapped to actions
+        // Only prevent if we are actually handling the shortcut
         e.preventDefault();
         
         switch (actionId) {
@@ -2364,49 +2397,92 @@ export default function Home() {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-0 bg-theme-modal-content">
-                  <div className="divide-y divide-theme-soft">
-                    {SHORTCUT_DEFS.map((def) => {
-                      const isEditing = editingShortcutId === def.id;
-                      const current = shortcuts[def.id] || def.default;
-                      // Calculate platform default for this specific action
-                      const platformDefault = getPlatformDefaultShortcuts()[def.id];
-                      
-                      return (
-                        <div
-                          key={def.id}
-                          className={`flex items-center justify-between px-6 py-4 transition-colors ${
-                            isEditing
-                              ? 'bg-theme-highlight'
-                              : 'hover:bg-theme-card'
+                  {/* Mode Toggle */}
+                  <div className="px-6 py-4 border-b border-theme-soft bg-theme-modal-content-alt">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-theme-primary">修飾キーショートカットを使用</div>
+                        <div className="text-xs text-theme-secondary mt-0.5">
+                          オンにすると、テキスト入力中でも <span className="font-mono bg-theme-highlight px-1 rounded">Cmd+R</span> などで操作できます
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleUseModifiersChange(!useModifiers)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
+                          useModifiers ? 'bg-teal-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                        role="switch"
+                        aria-checked={useModifiers}
+                        aria-label="修飾キーショートカットを使用"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            useModifiers ? 'translate-x-5' : 'translate-x-0'
                           }`}
-                        >
-                          <span className="text-sm font-medium text-theme-primary">{def.label}</span>
+                        />
+                      </button>
+                    </div>
+                  </div>
 
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => setEditingShortcutId(def.id)}
-                              className={`
-                                min-w-[120px] px-3 py-1.5 rounded-md text-sm font-mono border transition-all
-                                ${isEditing
-                                  ? 'bg-theme-surface border-teal-500 text-theme-accent ring-2 ring-teal-500/20'
-                                  : 'bg-theme-card border-transparent text-theme-primary hover:border-theme-light'
-                                }
-                              `}
-                            >
-                              {isEditing ? 'キーを入力...' : formatShortcut(current)}
-                            </button>
+                  <div className="divide-y divide-theme-soft">
+                    {SHORTCUT_GROUPS.map((group) => {
+                      const groupShortcuts = SHORTCUT_DEFS.filter(def => def.group === group.id);
+                      if (groupShortcuts.length === 0) return null;
 
-                            {/* Reset individual shortcut if changed from platform default */}
-                            {JSON.stringify(current) !== JSON.stringify(platformDefault) && (
-                              <button
-                                onClick={() => handleShortcutChange(def.id, platformDefault)}
-                                className="p-1.5 text-theme-tertiary hover:text-red-500 transition-colors"
-                                title="デフォルトに戻す"
-                              >
-                                <ArrowLeftIcon className="w-4 h-4" />
-                              </button>
-                            )}
+                      return (
+                        <div key={group.id}>
+                          {/* Group Header */}
+                          <div className="px-6 py-2 bg-theme-card sticky top-0">
+                            <span className="text-xs font-semibold text-theme-accent uppercase tracking-wider">
+                              {group.label}
+                            </span>
                           </div>
+
+                          {/* Group Items */}
+                          {groupShortcuts.map((def) => {
+                            const isEditing = editingShortcutId === def.id;
+                            const current = shortcuts[def.id] || def.default;
+                            const platformDefault = getPlatformDefaultShortcuts(useModifiers)[def.id];
+
+                            return (
+                              <div
+                                key={def.id}
+                                className={`flex items-center justify-between px-6 py-3 transition-colors ${
+                                  isEditing
+                                    ? 'bg-theme-highlight'
+                                    : 'hover:bg-theme-card'
+                                }`}
+                              >
+                                <span className="text-sm text-theme-primary pl-2">{def.label}</span>
+
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => setEditingShortcutId(def.id)}
+                                    className={`
+                                      min-w-[100px] px-3 py-1.5 rounded-md text-sm font-mono border transition-all
+                                      ${isEditing
+                                        ? 'bg-theme-surface border-teal-500 text-theme-accent ring-2 ring-teal-500/20'
+                                        : 'bg-theme-card border-transparent text-theme-primary hover:border-theme-light'
+                                      }
+                                    `}
+                                  >
+                                    {isEditing ? 'キーを入力...' : formatShortcut(current)}
+                                  </button>
+
+                                  {JSON.stringify(current) !== JSON.stringify(platformDefault) && (
+                                    <button
+                                      onClick={() => handleShortcutChange(def.id, platformDefault)}
+                                      className="p-1.5 text-theme-tertiary hover:text-red-500 transition-colors"
+                                      title="デフォルトに戻す"
+                                    >
+                                      <ArrowLeftIcon className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}
