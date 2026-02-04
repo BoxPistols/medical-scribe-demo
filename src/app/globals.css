@@ -879,31 +879,35 @@ body::after {
 
 /* Resize handle styles with theme support */
 .resize-handle-line {
-  width: 0.25rem;
+  width: 0.125rem;
   height: 100%;
   background: var(--border-light);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   border-radius: 9999px;
+  opacity: 0.3;
 }
 
 .group:hover .resize-handle-line {
   background: var(--accent-primary);
-  width: 0.375rem;
-  box-shadow: 0 0 12px var(--accent-primary);
+  width: 0.25rem;
+  opacity: 0.8;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
 }
 
 .resize-handle-dot {
-  width: 0.25rem;
-  height: 0.25rem;
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: 9999px;
-  background: var(--text-muted);
-  transition: all 0.2s ease;
+  background: var(--border-medium);
+  transition: all 0.3s ease;
+  opacity: 0.4;
 }
 
 .group:hover .resize-handle-dot {
   background: var(--accent-primary);
-  box-shadow: 0 0 8px var(--accent-primary);
-  transform: scale(1.5);
+  opacity: 1;
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.5);
+  transform: scale(1.2);
 }
 
 /* Responsive utilities */

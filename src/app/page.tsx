@@ -249,6 +249,23 @@ export default function Home() {
     };
   }, []);
 
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (showHelp) {
+          setShowHelp(false);
+        } else if (showExportPreview) {
+          setShowExportPreview(false);
+          setExportPreviewData(null);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showHelp, showExportPreview]);
+
   // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1594,11 +1611,11 @@ export default function Home() {
 
           {/* Export Preview Modal */}
           {showExportPreview && exportPreviewData && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+              <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-gray-200/50 dark:border-gray-700/50">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border">
+                  <h3 className="text-lg font-semibold text-theme-primary">
                     エクスポートプレビュー ({exportPreviewData.type.toUpperCase()})
                   </h3>
                   <button
@@ -1606,46 +1623,40 @@ export default function Home() {
                       setShowExportPreview(false);
                       setExportPreviewData(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-theme-tertiary hover:text-theme-primary transition-colors"
                     aria-label="プレビューを閉じる"
                   >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon className="w-6 h-6" />
                   </button>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto px-6 py-4">
-                  <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+                  <div className="mb-4 flex items-center gap-2 text-sm text-theme-secondary">
+                    <DocumentIcon className="w-4 h-4" />
                     <span className="font-mono">{exportPreviewData.filename}</span>
                   </div>
-                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words">
+                  <pre className="bg-gray-50 dark:bg-gray-800/50 border border-theme-border rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words text-theme-primary">
                     {exportPreviewData.content}
                   </pre>
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-theme-border bg-gray-50/50 dark:bg-gray-800/30">
                   <button
                     onClick={() => {
                       setShowExportPreview(false);
                       setExportPreviewData(null);
                     }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                    className="px-4 py-2 text-sm font-medium text-theme-primary bg-white/50 dark:bg-gray-800/50 border border-theme-border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
                   >
                     キャンセル
                   </button>
                   <button
                     onClick={confirmExport}
-                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 flex items-center gap-2 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
+                    <ArrowDownTrayIcon className="w-4 h-4" />
                     ダウンロード
                   </button>
                 </div>
@@ -1655,26 +1666,22 @@ export default function Home() {
 
           {/* Help Modal */}
           {showHelp && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-              <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+              <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200/50 dark:border-gray-700/50">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-teal-100">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border bg-gradient-to-r from-teal-50/80 to-teal-100/80 dark:from-teal-900/30 dark:to-teal-800/30">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg">
+                      <QuestionMarkCircleIcon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900">使い方ガイド</h3>
+                    <h3 className="text-xl font-bold text-theme-primary">使い方ガイド</h3>
                   </div>
                   <button
                     onClick={() => setShowHelp(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-theme-tertiary hover:text-theme-primary transition-colors"
                     aria-label="ヘルプを閉じる"
                   >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon className="w-6 h-6" />
                   </button>
                 </div>
 
@@ -1683,13 +1690,11 @@ export default function Home() {
                   <div className="space-y-6">
                     {/* Overview */}
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                      <h4 className="text-lg font-bold text-theme-primary mb-2 flex items-center gap-2">
+                        <InformationCircleIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                         このアプリについて
                       </h4>
-                      <p className="text-sm text-gray-700 leading-relaxed">
+                      <p className="text-sm text-theme-secondary leading-relaxed">
                         Medical Voice Scribeは、音声による医療問診を自動的にSOAPカルテ形式に変換するデモアプリケーションです。
                         医療現場での記録業務の効率化を目的としています。
                       </p>
@@ -1697,13 +1702,11 @@ export default function Home() {
 
                     {/* How to Use */}
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
+                      <h4 className="text-lg font-bold text-theme-primary mb-3 flex items-center gap-2">
+                        <ClipboardDocumentIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                         基本的な使い方
                       </h4>
-                      <ol className="space-y-3 text-sm text-gray-700">
+                      <ol className="space-y-3 text-sm text-theme-secondary">
                         <li className="flex gap-3">
                           <span className="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
                           <div>
@@ -1739,38 +1742,34 @@ export default function Home() {
 
                     {/* Features */}
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
-                        </svg>
+                      <h4 className="text-lg font-bold text-theme-primary mb-3 flex items-center gap-2">
+                        <PuzzlePieceIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                         主な機能
                       </h4>
                       <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <div className="font-semibold text-gray-900 mb-1">🎤 音声入力</div>
-                          <div className="text-gray-600 text-xs">ブラウザの音声認識機能を使用してリアルタイムに文字起こし</div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-theme-border">
+                          <div className="font-semibold text-theme-primary mb-1">🎤 音声入力</div>
+                          <div className="text-theme-secondary text-xs">ブラウザの音声認識機能を使用してリアルタイムに文字起こし</div>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <div className="font-semibold text-gray-900 mb-1">🤖 AI生成</div>
-                          <div className="text-gray-600 text-xs">OpenAI GPT-4oを使用したSOAPカルテの自動生成</div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-theme-border">
+                          <div className="font-semibold text-theme-primary mb-1">🤖 AI生成</div>
+                          <div className="text-theme-secondary text-xs">OpenAI GPT-4oを使用したSOAPカルテの自動生成</div>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <div className="font-semibold text-gray-900 mb-1">🔊 読み上げ</div>
-                          <div className="text-gray-600 text-xs">生成されたカルテをシステム音声で読み上げ（速度・音声調整可能）</div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-theme-border">
+                          <div className="font-semibold text-theme-primary mb-1">🔊 読み上げ</div>
+                          <div className="text-theme-secondary text-xs">生成されたカルテをシステム音声で読み上げ（速度・音声調整可能）</div>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <div className="font-semibold text-gray-900 mb-1">💾 保存・共有</div>
-                          <div className="text-gray-600 text-xs">JSON/CSV形式でエクスポート、インポートが可能</div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-theme-border">
+                          <div className="font-semibold text-theme-primary mb-1">💾 保存・共有</div>
+                          <div className="text-theme-secondary text-xs">JSON/CSV形式でエクスポート、インポートが可能</div>
                         </div>
                       </div>
                     </div>
 
                     {/* SOAP Format */}
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                      <h4 className="text-lg font-bold text-theme-primary mb-3 flex items-center gap-2">
+                        <DocumentTextIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                         SOAP形式とは
                       </h4>
                       <div className="space-y-2 text-sm">
@@ -1806,14 +1805,12 @@ export default function Home() {
                     </div>
 
                     {/* Important Notes */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <h4 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4">
+                      <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-2 flex items-center gap-2">
+                        <ExclamationTriangleIcon className="w-5 h-5" />
                         重要な注意事項
                       </h4>
-                      <ul className="space-y-1 text-xs text-amber-900">
+                      <ul className="space-y-1 text-xs text-amber-900 dark:text-amber-200">
                         <li className="flex gap-2">
                           <span>•</span>
                           <span>このアプリは<strong>デモンストレーション用途</strong>です。実際の臨床現場での使用は想定していません。</span>
@@ -1836,10 +1833,10 @@ export default function Home() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <div className="px-6 py-4 border-t border-theme-border bg-gray-50/50 dark:bg-gray-800/30 flex justify-end">
                   <button
                     onClick={() => setShowHelp(false)}
-                    className="px-5 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
+                    className="px-5 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors whitespace-nowrap"
                   >
                     閉じる
                   </button>
