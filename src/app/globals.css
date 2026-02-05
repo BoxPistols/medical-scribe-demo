@@ -1532,17 +1532,27 @@ body::after {
 /* Content */
 .chat-support-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   min-height: 0;
-  max-height: 24rem;
 }
 
 .chat-support-recommendations,
-.chat-support-chat,
 .chat-support-help {
   padding: 1rem;
   background: #ffffff;
   color: #1e293b;
+}
+
+.chat-support-chat {
+  padding: 1rem;
+  background: #ffffff;
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 [data-theme="dark"] .chat-support-recommendations,
@@ -1627,7 +1637,9 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  min-height: 12rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .chat-support-message {
@@ -1738,6 +1750,7 @@ body::after {
   border-top: 1px solid var(--border-soft);
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
   align-items: flex-end;
 }
 
@@ -1927,7 +1940,4 @@ body::after {
     max-height: calc(100vh - 6rem);
   }
 
-  .chat-support-content {
-    max-height: 18rem;
-  }
 }

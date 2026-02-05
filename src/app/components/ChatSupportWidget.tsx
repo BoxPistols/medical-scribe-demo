@@ -134,7 +134,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
 
   // 鑑別診断の確認を促す
   if (
-    soap.assessment?.differentialDiagnosis &&
+    Array.isArray(soap.assessment?.differentialDiagnosis) &&
     soap.assessment.differentialDiagnosis.length > 0
   ) {
     recommendations.push({
@@ -164,7 +164,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
   }
 
   // 追加検査の提案
-  if (soap.plan?.tests && soap.plan.tests.length > 0) {
+  if (Array.isArray(soap.plan?.tests) && soap.plan.tests.length > 0) {
     recommendations.push({
       id: "tests-suggested",
       type: "test",
@@ -201,9 +201,9 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
 
   // 薬の相互作用チェック
   if (
-    soap.plan?.medications &&
+    Array.isArray(soap.plan?.medications) &&
     soap.plan.medications.length > 0 &&
-    soap.subjective?.medications &&
+    Array.isArray(soap.subjective?.medications) &&
     soap.subjective.medications.length > 0
   ) {
     recommendations.push({
@@ -218,7 +218,7 @@ function generateRecommendations(soapNote: SoapNote | null): Recommendation[] {
 
   // 随伴症状からの追加チェック
   if (
-    soap.subjective?.associatedSymptoms &&
+    Array.isArray(soap.subjective?.associatedSymptoms) &&
     soap.subjective.associatedSymptoms.length > 2
   ) {
     recommendations.push({

@@ -267,6 +267,7 @@ export default function Home() {
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [analysisProgress, setAnalysisProgress] = useState(0); // 0-100
 
   // Token usage state
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
@@ -657,6 +658,10 @@ export default function Home() {
     setError(null);
     setResult(null);
     setTokenUsage(null);
+    setAnalysisProgress(0);
+
+    // Estimated JSON size for progress calculation (typically 2000-4000 chars)
+    const ESTIMATED_RESPONSE_SIZE = 3000;
 
     try {
       const res = await fetch("/api/analyze", {
@@ -674,14 +679,19 @@ export default function Home() {
         setError(errorData.error || "APIエラーが発生しました");
         setIsStreaming(false);
         setLoading(false);
+        setAnalysisProgress(0);
         return;
       }
+
+      // API connection established
+      setAnalysisProgress(10);
 
       const reader = res.body?.getReader();
       if (!reader) {
         setError("ストリーミングレスポンスの取得に失敗しました");
         setIsStreaming(false);
         setLoading(false);
+        setAnalysisProgress(0);
         return;
       }
 
@@ -713,11 +723,13 @@ export default function Home() {
                   setError(data.error);
                   setIsStreaming(false);
                   setLoading(false);
+                  setAnalysisProgress(0);
                   return;
                 }
 
                 if (data.done) {
                   streamCompleted = true;
+                  setAnalysisProgress(100);
                   // Parse the accumulated JSON
                   try {
                     const parsedResult = JSON.parse(accumulatedText);
@@ -725,12 +737,14 @@ export default function Home() {
                       setError(
                         "AIの応答形式が不正です。もう一度お試しください。"
                       );
+                      setAnalysisProgress(0);
                     } else {
                       setResult(parsedResult);
                     }
                   } catch (parseError) {
                     console.error("JSON parse error:", parseError);
                     setError("AIの応答を解析できませんでした。");
+                    setAnalysisProgress(0);
                   }
                   // Save token usage if available
                   if (data.usage) {
@@ -744,6 +758,9 @@ export default function Home() {
                 if (data.content) {
                   accumulatedText += data.content;
                   setStreamingText(accumulatedText);
+                  // Update progress based on received data (10-95%)
+                  const progress = Math.min(95, 10 + Math.floor((accumulatedText.length / ESTIMATED_RESPONSE_SIZE) * 85));
+                  setAnalysisProgress(progress);
                 }
               } catch {
                 // Ignore JSON parse errors for incomplete chunks
@@ -764,6 +781,7 @@ export default function Home() {
           }
         } catch {
           setError("ストリームが予期せず終了しました。");
+          setAnalysisProgress(0);
         }
       }
     } catch (e) {
@@ -771,6 +789,7 @@ export default function Home() {
       setError(
         "エラーが発生しました。APIキーとネットワーク接続を確認してください。"
       );
+      setAnalysisProgress(0);
     } finally {
       setIsStreaming(false);
       setLoading(false);
@@ -1623,7 +1642,7 @@ export default function Home() {
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-3 pr-8 py-1.5 text-xs text-theme-primary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-3 pr-8 py-1.5 text-[11px] text-theme-tertiary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-label="AIモデル選択"
                   title={(() => {
                     const m = AVAILABLE_MODELS.find(m => m.id === selectedModel);
@@ -1637,30 +1656,28 @@ export default function Home() {
                   ))}
                 </select>
                 <ChevronDownIcon
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary pointer-events-none"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted pointer-events-none"
                   aria-hidden="true"
                 />
                 {/* Model info tooltip */}
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-64 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs">
-                  <div className="font-semibold text-theme-primary mb-2">モデル比較</div>
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-theme-tertiary">
-                        <th className="text-left pb-1">モデル</th>
-                        <th className="text-center pb-1">速度</th>
-                        <th className="text-center pb-1">品質</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-theme-secondary">
-                      {AVAILABLE_MODELS.map((m) => (
-                        <tr key={m.id} className={m.id === selectedModel ? 'text-theme-primary font-medium' : ''}>
-                          <td className="py-0.5">{m.name.replace('GPT-', '')}</td>
-                          <td className="text-center">{'⚡'.repeat(m.speed)}</td>
-                          <td className="text-center">{'★'.repeat(m.quality)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-72 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs">
+                  <div className="font-medium text-theme-secondary text-[11px] mb-2">モデル比較</div>
+                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-1.5 text-left">
+                    <div className="text-theme-tertiary text-[10px] font-medium pb-1 border-b border-theme-border">モデル</div>
+                    <div className="text-theme-tertiary text-[10px] font-medium pb-1 border-b border-theme-border">速度</div>
+                    <div className="text-theme-tertiary text-[10px] font-medium pb-1 border-b border-theme-border">品質</div>
+                    {AVAILABLE_MODELS.flatMap((m) => [
+                      <div key={`${m.id}-name`} className={`py-0.5 ${m.id === selectedModel ? 'text-theme-primary font-medium' : 'text-theme-secondary'}`}>
+                        {m.name.replace('GPT-', '')}
+                      </div>,
+                      <div key={`${m.id}-speed`} className={`py-0.5 text-amber-500 ${m.id === selectedModel ? 'opacity-100' : 'opacity-70'}`}>
+                        {'⚡'.repeat(m.speed)}
+                      </div>,
+                      <div key={`${m.id}-quality`} className={`py-0.5 ${m.id === selectedModel ? 'text-amber-500' : 'text-theme-tertiary'}`}>
+                        {'★'.repeat(m.quality)}{'☆'.repeat(5 - m.quality)}
+                      </div>,
+                    ])}
+                  </div>
                 </div>
               </div>
 
@@ -1731,7 +1748,7 @@ export default function Home() {
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-2 pr-6 py-1 text-sm text-theme-primary cursor-pointer"
+                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-2 pr-6 py-1 text-xs text-theme-tertiary cursor-pointer"
                   aria-label="AIモデル選択"
                 >
                   {AVAILABLE_MODELS.map((model) => (
@@ -1741,7 +1758,7 @@ export default function Home() {
                   ))}
                 </select>
                 <ChevronDownIcon
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-theme-tertiary pointer-events-none"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-theme-muted pointer-events-none"
                   aria-hidden="true"
                 />
               </div>
@@ -2398,15 +2415,17 @@ export default function Home() {
                   {/* Loading/Streaming state */}
                   {loading && (
                     <div className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div
-                          className="loading-spinner animate-spin"
-                          style={{
-                            width: "1.5rem",
-                            height: "1.5rem",
-                            borderWidth: "2px",
-                          }}
-                        />
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="relative">
+                          <div
+                            className="loading-spinner animate-spin"
+                            style={{
+                              width: "1.5rem",
+                              height: "1.5rem",
+                              borderWidth: "2px",
+                            }}
+                          />
+                        </div>
                         <span
                           className="text-sm font-medium"
                           style={{ color: "var(--text-secondary)" }}
@@ -2416,11 +2435,30 @@ export default function Home() {
                             : "解析準備中..."}
                         </span>
                         <span
-                          className="text-xs"
+                          className="text-xs font-mono tabular-nums"
+                          style={{ color: "var(--accent-primary)" }}
+                        >
+                          {analysisProgress}%
+                        </span>
+                        <span
+                          className="text-xs ml-auto"
                           style={{ color: "var(--text-tertiary)" }}
                         >
                           {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || selectedModel}
                         </span>
+                      </div>
+                      {/* Progress bar */}
+                      <div
+                        className="h-1 rounded-full mb-4 overflow-hidden"
+                        style={{ backgroundColor: "var(--bg-tertiary)" }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300 ease-out"
+                          style={{
+                            width: `${analysisProgress}%`,
+                            backgroundColor: "var(--accent-primary)",
+                          }}
+                        />
                       </div>
                       {isStreaming && streamingText && (
                         <div
@@ -2553,7 +2591,7 @@ export default function Home() {
                               </div>
                             </div>
                           )}
-                          {result.soap.subjective?.symptoms &&
+                          {Array.isArray(result.soap.subjective?.symptoms) &&
                             result.soap.subjective.symptoms.length > 0 && (
                               <div>
                                 <div className="font-bold text-xs text-theme-secondary mb-1">
@@ -2715,7 +2753,7 @@ export default function Home() {
                               )}
                             </div>
                           )}
-                          {result.soap.assessment?.differentialDiagnosis &&
+                          {Array.isArray(result.soap.assessment?.differentialDiagnosis) &&
                             result.soap.assessment.differentialDiagnosis
                               .length > 0 && (
                               <div>
@@ -2775,7 +2813,7 @@ export default function Home() {
                               </div>
                             </div>
                           )}
-                          {result.soap.plan?.medications &&
+                          {Array.isArray(result.soap.plan?.medications) &&
                             result.soap.plan.medications.length > 0 && (
                               <div>
                                 <div className="font-bold text-xs text-theme-secondary mb-2">
@@ -2817,7 +2855,7 @@ export default function Home() {
                                 </div>
                               </div>
                             )}
-                          {result.soap.plan?.tests &&
+                          {Array.isArray(result.soap.plan?.tests) &&
                             result.soap.plan.tests.length > 0 && (
                               <div>
                                 <div className="font-bold text-xs text-theme-secondary mb-1">
