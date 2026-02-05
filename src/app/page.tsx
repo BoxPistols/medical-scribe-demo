@@ -1688,7 +1688,7 @@ export default function Home() {
                   onClick={() => setShowShortcutsModal(true)}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
                   aria-label="キーボード設定"
-                  data-tooltip="ショートカット設定"
+                  data-tooltip-bottom="ショートカット設定"
                 >
                   <KeyboardIcon className="w-6 h-6" aria-hidden="true" />
                 </button>
@@ -1698,7 +1698,7 @@ export default function Home() {
                   onClick={handleThemeCycle}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
                   aria-label="テーマ切り替え"
-                  data-tooltip={`テーマ: ${
+                  data-tooltip-bottom={`テーマ: ${
                     theme === "system"
                       ? "自動"
                       : theme === "light"
@@ -1725,7 +1725,7 @@ export default function Home() {
                   onClick={() => setShowHelp(true)}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
                   aria-label="ヘルプを表示"
-                  data-tooltip="ヘルプ"
+                  data-tooltip-bottom="ヘルプ"
                 >
                   <QuestionMarkCircleIcon
                     className="w-6 h-6"
@@ -1768,6 +1768,13 @@ export default function Home() {
                 onClick={handleThemeCycle}
                 className="p-1 rounded-lg text-theme-tertiary btn-theme-hover"
                 aria-label="テーマ切り替え"
+                data-tooltip-bottom={`テーマ: ${
+                  theme === "system"
+                    ? "自動"
+                    : theme === "light"
+                    ? "ライト"
+                    : "ダーク"
+                }`}
               >
                 {theme === "light" && (
                   <SunIcon className="w-4 h-4" aria-hidden="true" />
@@ -1784,6 +1791,7 @@ export default function Home() {
                 onClick={() => setShowHelp(true)}
                 className="p-1 rounded-lg text-theme-tertiary btn-theme-hover"
                 aria-label="ヘルプ"
+                data-tooltip-bottom="ヘルプ"
               >
                 <QuestionMarkCircleIcon
                   className="w-4 h-4"
@@ -1972,7 +1980,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("left")}
                     className="layout-btn group"
-                    title="左側を広く"
+                    data-tooltip="左側を広く"
                     aria-label="左側を広くする"
                   >
                     <svg
@@ -2002,7 +2010,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("equal")}
                     className="layout-btn group"
-                    title="均等"
+                    data-tooltip="均等"
                     aria-label="左右を均等にする"
                   >
                     <svg
@@ -2032,7 +2040,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("right")}
                     className="layout-btn group"
-                    title="右側を広く"
+                    data-tooltip="右側を広く"
                     aria-label="右側を広くする"
                   >
                     <svg
@@ -2378,6 +2386,7 @@ export default function Home() {
                           onClick={() => setError(null)}
                           className="text-red-600 hover:text-red-800"
                           aria-label="エラーメッセージを閉じる"
+                          data-tooltip="閉じる"
                         >
                           <svg
                             className="w-5 h-5"
@@ -2565,7 +2574,7 @@ export default function Home() {
                           onClick={copySectionS}
                           className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
                           aria-label="Sセクションをコピー"
-                          title="このセクションをコピー"
+                          data-tooltip="コピー"
                         >
                           <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
                         </button>
@@ -2634,7 +2643,7 @@ export default function Home() {
                           onClick={copySectionO}
                           className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
                           aria-label="Oセクションをコピー"
-                          title="このセクションをコピー"
+                          data-tooltip="コピー"
                         >
                           <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
                         </button>
@@ -2722,7 +2731,7 @@ export default function Home() {
                           onClick={copySectionA}
                           className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
                           aria-label="Aセクションをコピー"
-                          title="このセクションをコピー"
+                          data-tooltip="コピー"
                         >
                           <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
                         </button>
@@ -2787,7 +2796,7 @@ export default function Home() {
                           onClick={copySectionP}
                           className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
                           aria-label="Pセクションをコピー"
-                          title="このセクションをコピー"
+                          data-tooltip="コピー"
                         >
                           <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
                         </button>
@@ -2926,6 +2935,7 @@ export default function Home() {
                     }}
                     className="text-theme-tertiary hover:text-theme-primary transition-colors"
                     aria-label="プレビューを閉じる"
+                    data-tooltip-bottom="閉じる"
                   >
                     <XMarkIcon className="w-6 h-6" />
                   </button>
@@ -2989,6 +2999,7 @@ export default function Home() {
                     onClick={() => setShowHelp(false)}
                     className="text-theme-tertiary hover:text-theme-primary transition-colors"
                     aria-label="ヘルプを閉じる"
+                    data-tooltip-bottom="閉じる"
                   >
                     <XMarkIcon className="w-6 h-6" />
                   </button>
@@ -3273,6 +3284,8 @@ export default function Home() {
                       setEditingShortcutId(null);
                     }}
                     className="text-theme-tertiary hover:text-theme-primary transition-colors"
+                    aria-label="閉じる"
+                    data-tooltip-bottom="閉じる"
                   >
                     <XMarkIcon className="w-6 h-6" />
                   </button>

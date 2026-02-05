@@ -1123,7 +1123,8 @@ body::after {
 }
 
 /* Tooltip styles */
-[data-tooltip] {
+[data-tooltip],
+[data-tooltip-bottom] {
   position: relative;
 }
 
@@ -1133,29 +1134,29 @@ body::after {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 [data-tooltip]::before {
   content: attr(data-tooltip);
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
+  background: #1f2937;
+  color: #ffffff;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow: var(--shadow-lg);
-  bottom: calc(100% + 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
 }
 
 [data-tooltip]::after {
   content: '';
-  border: 6px solid transparent;
-  border-top-color: var(--text-primary);
-  bottom: calc(100% + 0.125rem);
+  border: 5px solid transparent;
+  border-top-color: #1f2937;
+  bottom: calc(100% + -2px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
 }
@@ -1169,35 +1170,35 @@ body::after {
 /* Bottom tooltip variant */
 [data-tooltip-bottom]::before {
   content: attr(data-tooltip-bottom);
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
+  background: #1f2937;
+  color: #ffffff;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow: var(--shadow-lg);
-  top: calc(100% + 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
+  z-index: 9999;
   position: absolute;
 }
 
 [data-tooltip-bottom]::after {
   content: '';
-  border: 6px solid transparent;
-  border-bottom-color: var(--text-primary);
-  top: calc(100% + 0.125rem);
+  border: 5px solid transparent;
+  border-bottom-color: #1f2937;
+  top: calc(100% + -2px);
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
+  z-index: 9999;
   position: absolute;
 }
 
