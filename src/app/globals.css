@@ -476,7 +476,7 @@
   content: '';
   border: 5px solid transparent;
   border-top-color: #1f2937;
-  bottom: calc(100% + -2px);
+  bottom: calc(100% - 2px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
 }
@@ -512,7 +512,7 @@
   content: '';
   border: 5px solid transparent;
   border-bottom-color: #1f2937;
-  top: calc(100% + -2px);
+  top: calc(100% - 2px);
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
   opacity: 0;

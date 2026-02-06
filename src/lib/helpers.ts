@@ -20,7 +20,9 @@ export const escapeCsvCell = (value: unknown): string => {
 };
 
 /**
- * Detect if running on Mac/iOS platform
+ * Detect if running on Mac/iOS platform.
+ * Uses navigator.platform (deprecated but widely supported) with
+ * navigator.userAgent fallback for cross-browser compatibility.
  */
 export const isMacPlatform = (): boolean => {
   if (typeof navigator === "undefined") return false;
