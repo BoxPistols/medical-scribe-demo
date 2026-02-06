@@ -235,6 +235,7 @@
 
 /* SOAP Sections - Styled Cards */
 .soap-section {
+  position: relative;
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: 0.75rem;
@@ -254,15 +255,21 @@
   font-weight: 700;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid transparent;
 }
 
 .soap-content {
-  padding: 1rem;
-  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
   line-height: 1.6;
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+/* Inner content wrapper inside soap-section (after soap-label) */
+.soap-section > .space-y-3 {
+  padding: 0.75rem 1rem;
 }
 
 /* Specific Section Styles */
