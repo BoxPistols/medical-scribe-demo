@@ -14,7 +14,6 @@ import {
   PauseIcon,
   StopIcon,
   Cog6ToothIcon,
-  QuestionMarkCircleIcon,
   XMarkIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -50,6 +49,18 @@ const KeyboardIcon = ({ className }: { className?: string }) => (
   >
     <rect x="2" y="6" width="20" height="12" rx="2" />
     <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M18 12h.01M10 12h.01M14 12h.01M8 15h8" />
+  </svg>
+);
+
+// Custom Help Outline Icon Component
+const HelpOutlineIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" />
   </svg>
 );
 
@@ -315,6 +326,8 @@ export default function Home() {
 
   // AI Model selection state
   const [selectedModel, setSelectedModel] = useState<ModelId>(DEFAULT_MODEL);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
 
   // Shortcuts state
   const [useModifiers, setUseModifiers] = useState(true); // Default to true (Command+R etc)
@@ -610,6 +623,18 @@ export default function Home() {
       document.removeEventListener("click", handleClickOutside);
     };
   }, [showExportMenu]);
+
+  // Close model menu when clicking outside
+  useEffect(() => {
+    if (!isModelMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(event.target as Node)) {
+        setIsModelMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isModelMenuOpen]);
 
   const toggleRecording = () => {
     if (isRecording) {
@@ -1638,47 +1663,91 @@ export default function Home() {
               </div>
 
               {/* AI Model selector */}
-              <div className="relative group">
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-3 pr-8 py-1.5 text-[11px] text-theme-tertiary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <div className="relative" ref={modelMenuRef}>
+                <button
+                  onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      if (!isModelMenuOpen) setIsModelMenuOpen(true);
+                    } else if (e.key === 'Escape' && isModelMenuOpen) {
+                      setIsModelMenuOpen(false);
+                    }
+                  }}
+                  className="flex items-center justify-between min-w-[180px] bg-theme-card border border-theme-border rounded-lg pl-3 pr-2 py-1.5 text-[11px] text-theme-tertiary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   aria-label="AIモデル選択"
-                  title={(() => {
-                    const m = AVAILABLE_MODELS.find(m => m.id === selectedModel);
-                    return m ? `${m.name}\n${m.description}\n速度: ${'⚡'.repeat(m.speed)} 品質: ${'★'.repeat(m.quality)}` : '';
-                  })()}
+                  aria-expanded={isModelMenuOpen}
+                  aria-haspopup="listbox"
                 >
-                  {AVAILABLE_MODELS.map((model) => (
-                    <option key={model.id} value={model.id} title={`${model.description} | 速度:${model.speed}/5 品質:${model.quality}/5`}>
-                      {model.name} ({model.description})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDownIcon
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted pointer-events-none"
-                  aria-hidden="true"
-                />
-                {/* Model info tooltip */}
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-72 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs">
-                  <div className="font-medium text-theme-secondary text-[11px] mb-2">モデル比較</div>
-                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-1.5 text-left">
-                    <div className="text-theme-tertiary text-[10px] font-medium pb-1 border-b border-theme-border">モデル</div>
-                    <div className="text-theme-tertiary text-[10px] font-medium pb-1 border-b border-theme-border">速度</div>
-                    <div className="text-theme-tertiary text-[10px] font-medium pb-1 border-b border-theme-border">品質</div>
-                    {AVAILABLE_MODELS.flatMap((m) => [
-                      <div key={`${m.id}-name`} className={`py-0.5 ${m.id === selectedModel ? 'text-theme-primary font-medium' : 'text-theme-secondary'}`}>
-                        {m.name.replace('GPT-', '')}
-                      </div>,
-                      <div key={`${m.id}-speed`} className={`py-0.5 text-amber-500 ${m.id === selectedModel ? 'opacity-100' : 'opacity-70'}`}>
-                        {'⚡'.repeat(m.speed)}
-                      </div>,
-                      <div key={`${m.id}-quality`} className={`py-0.5 ${m.id === selectedModel ? 'text-amber-500' : 'text-theme-tertiary'}`}>
-                        {'★'.repeat(m.quality)}{'☆'.repeat(5 - m.quality)}
-                      </div>,
-                    ])}
+                  <span className="truncate mr-2">
+                    {(() => {
+                      const m = AVAILABLE_MODELS.find(m => m.id === selectedModel);
+                      return m ? `${m.name} (${m.description})` : 'モデルを選択';
+                    })()}
+                  </span>
+                  <ChevronDownIcon
+                    className={`w-4 h-4 text-theme-muted transition-transform duration-200 ${isModelMenuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {/* Model selection menu */}
+                {isModelMenuOpen && (
+                  <div
+                    className="absolute left-0 top-full mt-2 z-50 w-72 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs animate-fade-in"
+                    role="listbox"
+                    aria-label="AIモデル一覧"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setIsModelMenuOpen(false);
+                        modelMenuRef.current?.querySelector('button')?.focus();
+                      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const currentIndex = AVAILABLE_MODELS.findIndex(m => m.id === selectedModel);
+                        const nextIndex = e.key === 'ArrowDown'
+                          ? Math.min(currentIndex + 1, AVAILABLE_MODELS.length - 1)
+                          : Math.max(currentIndex - 1, 0);
+                        setSelectedModel(AVAILABLE_MODELS[nextIndex].id);
+                      } else if (e.key === 'Enter') {
+                        setIsModelMenuOpen(false);
+                        modelMenuRef.current?.querySelector('button')?.focus();
+                      }
+                    }}
+                  >
+                    <div className="font-medium text-theme-secondary text-[11px] mb-2 px-2">モデル選択</div>
+                    <div className="grid grid-cols-[1fr_40px_60px] gap-2 px-2 py-1.5 text-[10px] text-theme-tertiary border-b border-theme-border mb-1">
+                      <div>モデル</div>
+                      <div>速度</div>
+                      <div>品質</div>
+                    </div>
+                    <div className="space-y-0.5" role="presentation">
+                      {AVAILABLE_MODELS.map((m) => (
+                        <button
+                          key={m.id}
+                          role="option"
+                          aria-selected={m.id === selectedModel}
+                          onClick={() => {
+                            setSelectedModel(m.id);
+                            setIsModelMenuOpen(false);
+                          }}
+                          className={`w-full grid grid-cols-[1fr_40px_60px] gap-2 px-2 py-1.5 rounded text-left transition-colors items-center ${
+                            m.id === selectedModel
+                              ? 'bg-theme-highlight text-theme-primary font-medium'
+                              : 'text-theme-secondary hover:bg-theme-bg-secondary hover:text-theme-primary'
+                          }`}
+                        >
+                          <div className="truncate">{m.name.replace('GPT-', '')}</div>
+                          <div className="text-amber-500 text-[10px]">
+                            {'⚡'.repeat(m.speed)}
+                          </div>
+                          <div className={`text-[10px] ${m.id === selectedModel ? 'text-amber-500' : 'text-theme-tertiary'}`}>
+                            {'★'.repeat(m.quality)}{'☆'.repeat(5 - m.quality)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Icon buttons - unified grid */}
@@ -1727,7 +1796,7 @@ export default function Home() {
                   aria-label="ヘルプを表示"
                   data-tooltip-bottom="ヘルプ"
                 >
-                  <QuestionMarkCircleIcon
+                  <HelpOutlineIcon
                     className="w-6 h-6"
                     aria-hidden="true"
                   />
@@ -1793,7 +1862,7 @@ export default function Home() {
                 aria-label="ヘルプ"
                 data-tooltip-bottom="ヘルプ"
               >
-                <QuestionMarkCircleIcon
+                <HelpOutlineIcon
                   className="w-4 h-4"
                   aria-hidden="true"
                 />
@@ -1980,7 +2049,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("left")}
                     className="layout-btn group"
-                    data-tooltip="左側を広く"
+                    data-tooltip-bottom="左側を広く"
                     aria-label="左側を広くする"
                   >
                     <svg
@@ -2010,7 +2079,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("equal")}
                     className="layout-btn group"
-                    data-tooltip="均等"
+                    data-tooltip-bottom="均等"
                     aria-label="左右を均等にする"
                   >
                     <svg
@@ -2040,7 +2109,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("right")}
                     className="layout-btn group"
-                    data-tooltip="右側を広く"
+                    data-tooltip-bottom="右側を広く"
                     aria-label="右側を広くする"
                   >
                     <svg
@@ -2989,7 +3058,7 @@ export default function Home() {
                       className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
                       style={{ background: "var(--gradient-primary)" }}
                     >
-                      <QuestionMarkCircleIcon className="w-6 h-6 text-white" />
+                      <HelpOutlineIcon className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-theme-primary">
                       使い方ガイド
