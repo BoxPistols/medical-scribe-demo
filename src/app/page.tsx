@@ -327,6 +327,7 @@ export default function Home() {
   // AI Model selection state
   const [selectedModel, setSelectedModel] = useState<ModelId>(DEFAULT_MODEL);
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [highlightedModelIndex, setHighlightedModelIndex] = useState(-1);
   const modelMenuRef = useRef<HTMLDivElement>(null);
 
   // Shortcuts state
@@ -1665,11 +1666,20 @@ export default function Home() {
               {/* AI Model selector */}
               <div className="relative" ref={modelMenuRef}>
                 <button
-                  onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                  onClick={() => {
+                    const opening = !isModelMenuOpen;
+                    setIsModelMenuOpen(opening);
+                    if (opening) {
+                      setHighlightedModelIndex(AVAILABLE_MODELS.findIndex(m => m.id === selectedModel));
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                       e.preventDefault();
-                      if (!isModelMenuOpen) setIsModelMenuOpen(true);
+                      if (!isModelMenuOpen) {
+                        setIsModelMenuOpen(true);
+                        setHighlightedModelIndex(AVAILABLE_MODELS.findIndex(m => m.id === selectedModel));
+                      }
                     } else if (e.key === 'Escape' && isModelMenuOpen) {
                       setIsModelMenuOpen(false);
                     }
@@ -1697,18 +1707,21 @@ export default function Home() {
                     className="absolute left-0 top-full mt-2 z-50 w-72 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs animate-fade-in"
                     role="listbox"
                     aria-label="AIモデル一覧"
+                    aria-activedescendant={highlightedModelIndex >= 0 ? `model-option-${AVAILABLE_MODELS[highlightedModelIndex]?.id}` : undefined}
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
                         setIsModelMenuOpen(false);
                         modelMenuRef.current?.querySelector('button')?.focus();
-                      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      } else if (e.key === 'ArrowDown') {
                         e.preventDefault();
-                        const currentIndex = AVAILABLE_MODELS.findIndex(m => m.id === selectedModel);
-                        const nextIndex = e.key === 'ArrowDown'
-                          ? Math.min(currentIndex + 1, AVAILABLE_MODELS.length - 1)
-                          : Math.max(currentIndex - 1, 0);
-                        setSelectedModel(AVAILABLE_MODELS[nextIndex].id);
+                        setHighlightedModelIndex(prev => Math.min(prev + 1, AVAILABLE_MODELS.length - 1));
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setHighlightedModelIndex(prev => Math.max(prev - 1, 0));
                       } else if (e.key === 'Enter') {
+                        if (highlightedModelIndex >= 0) {
+                          setSelectedModel(AVAILABLE_MODELS[highlightedModelIndex].id);
+                        }
                         setIsModelMenuOpen(false);
                         modelMenuRef.current?.querySelector('button')?.focus();
                       }
@@ -1721,19 +1734,23 @@ export default function Home() {
                       <div>品質</div>
                     </div>
                     <div className="space-y-0.5" role="presentation">
-                      {AVAILABLE_MODELS.map((m) => (
+                      {AVAILABLE_MODELS.map((m, index) => (
                         <button
                           key={m.id}
+                          id={`model-option-${m.id}`}
                           role="option"
                           aria-selected={m.id === selectedModel}
                           onClick={() => {
                             setSelectedModel(m.id);
                             setIsModelMenuOpen(false);
                           }}
+                          onMouseEnter={() => setHighlightedModelIndex(index)}
                           className={`w-full grid grid-cols-[1fr_40px_60px] gap-2 px-2 py-1.5 rounded text-left transition-colors items-center ${
                             m.id === selectedModel
                               ? 'bg-theme-highlight text-theme-primary font-medium'
-                              : 'text-theme-secondary hover:bg-theme-bg-secondary hover:text-theme-primary'
+                              : index === highlightedModelIndex
+                                ? 'bg-theme-bg-secondary text-theme-primary'
+                                : 'text-theme-secondary hover:bg-theme-bg-secondary hover:text-theme-primary'
                           }`}
                         >
                           <div className="truncate">{m.name.replace('GPT-', '')}</div>

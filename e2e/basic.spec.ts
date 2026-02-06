@@ -67,14 +67,11 @@ test.describe('Theme Toggle', () => {
     const themeButton = page.getByRole('button', { name: /テーマ/ })
     await themeButton.click()
 
-    // Wait for theme change
-    await page.waitForTimeout(100)
-
-    // Get new theme state
-    const newTheme = await html.getAttribute('data-theme')
-
-    // Theme should have changed
-    expect(initialTheme).not.toBe(newTheme)
+    // Wait for theme attribute to change
+    await expect(async () => {
+      const currentTheme = await html.getAttribute('data-theme')
+      expect(currentTheme).not.toBe(initialTheme)
+    }).toPass()
   })
 })
 
@@ -83,23 +80,30 @@ test.describe('Model Selection', () => {
     await page.goto('/')
   })
 
-  test('should have model selector', async ({ page }) => {
-    const modelSelector = page.locator('select[aria-label="AIモデル選択"]')
-    await expect(modelSelector).toBeVisible()
+  test('should have model selector button', async ({ page }) => {
+    const modelButton = page.getByRole('button', { name: 'AIモデル選択' })
+    await expect(modelButton).toBeVisible()
   })
 
-  test('should be able to change model', async ({ page }) => {
-    const modelSelector = page.locator('select[aria-label="AIモデル選択"]').first()
+  test('should be able to change model via dropdown', async ({ page }) => {
+    // Open the model dropdown
+    const modelButton = page.getByRole('button', { name: 'AIモデル選択' })
+    const initialText = await modelButton.textContent()
+    await modelButton.click()
 
-    // Get initial value
-    const initialValue = await modelSelector.inputValue()
+    // Wait for the listbox to appear
+    const listbox = page.getByRole('listbox', { name: 'AIモデル一覧' })
+    await expect(listbox).toBeVisible()
 
-    // Select a different model by value
-    await modelSelector.selectOption('gpt-4.1-mini')
+    // Click a different model option
+    const options = listbox.getByRole('option')
+    const secondOption = options.nth(1)
+    await secondOption.click()
 
-    // Verify selection changed to specific value
-    await expect(modelSelector).toHaveValue('gpt-4.1-mini')
-    expect(initialValue).not.toBe('gpt-4.1-mini')
+    // Dropdown should close and button text should change
+    await expect(listbox).not.toBeVisible()
+    const newText = await modelButton.textContent()
+    expect(newText).not.toBe(initialText)
   })
 })
 
