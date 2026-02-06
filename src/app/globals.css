@@ -322,7 +322,6 @@ body::after {
   border: none;
   outline: none;
   white-space: nowrap;
-  overflow: hidden;
 }
 
 /* Removed excessive ::after hover effect */
