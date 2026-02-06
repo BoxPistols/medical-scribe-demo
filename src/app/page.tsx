@@ -2062,7 +2062,7 @@ export default function Home() {
                 aria-label="レイアウト調整"
               >
                 {/* Layout preset buttons - Top positioned */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-10">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-50">
                   <button
                     onClick={() => setLayoutPreset("left")}
                     className="layout-btn group"
