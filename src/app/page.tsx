@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { SoapNote, ModelId, TokenUsage } from "./api/analyze/types";
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from "./api/analyze/types";
 import {
@@ -14,7 +15,6 @@ import {
   PauseIcon,
   StopIcon,
   Cog6ToothIcon,
-  QuestionMarkCircleIcon,
   XMarkIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -50,6 +50,18 @@ const KeyboardIcon = ({ className }: { className?: string }) => (
   >
     <rect x="2" y="6" width="20" height="12" rx="2" />
     <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M18 12h.01M10 12h.01M14 12h.01M8 15h8" />
+  </svg>
+);
+
+// Custom Help Outline Icon Component
+const HelpOutlineIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" />
   </svg>
 );
 
@@ -215,29 +227,32 @@ const isMacPlatform = (): boolean => {
 
 // Helper to get platform-specific defaults
 const getPlatformDefaultShortcuts = (
-  useModifiers: boolean = false
+  useModifiers: boolean = false,
 ): Record<ActionId, ShortcutKey> => {
   const isMac = isMacPlatform();
 
-  return SHORTCUT_DEFS.reduce((acc, def) => {
-    // If useModifiers is true and a modifierDefault exists, use it. Otherwise use default.
-    const sourceKey =
-      useModifiers && def.modifierDefault ? def.modifierDefault : def.default;
-    const key = { ...sourceKey };
+  return SHORTCUT_DEFS.reduce(
+    (acc, def) => {
+      // If useModifiers is true and a modifierDefault exists, use it. Otherwise use default.
+      const sourceKey =
+        useModifiers && def.modifierDefault ? def.modifierDefault : def.default;
+      const key = { ...sourceKey };
 
-    // Swap Ctrl for Meta on Mac for actions defined with Ctrl
-    if (isMac && key.ctrl) {
-      key.ctrl = false;
-      key.meta = true;
-    }
-    return { ...acc, [def.id]: key };
-  }, {} as Record<ActionId, ShortcutKey>);
+      // Swap Ctrl for Meta on Mac for actions defined with Ctrl
+      if (isMac && key.ctrl) {
+        key.ctrl = false;
+        key.meta = true;
+      }
+      return { ...acc, [def.id]: key };
+    },
+    {} as Record<ActionId, ShortcutKey>,
+  );
 };
 
 // Shortcut helper
 const formatShortcut = (
   shortcut: ShortcutKey | undefined,
-  compact: boolean = false
+  compact: boolean = false,
 ): string => {
   if (!shortcut) return "-";
 
@@ -267,6 +282,7 @@ export default function Home() {
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [analysisProgress, setAnalysisProgress] = useState(0); // 0-100
 
   // Token usage state
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
@@ -279,7 +295,7 @@ export default function Home() {
 
   // Accordion state (Mobile)
   const [activePanel, setActivePanel] = useState<"transcript" | "result">(
-    "transcript"
+    "transcript",
   );
 
   // Text-to-speech state
@@ -306,8 +322,28 @@ export default function Home() {
   // Theme and settings state
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
 
+  // Clock and timer state
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [showClock, setShowClock] = useState(true);
+  const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(
+    null,
+  );
+  const [recordingElapsed, setRecordingElapsed] = useState(0);
+
   // AI Model selection state
   const [selectedModel, setSelectedModel] = useState<ModelId>(DEFAULT_MODEL);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [highlightedModelIndex, setHighlightedModelIndex] = useState(-1);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
+
+  // Portal tooltip state (escapes overflow:hidden ancestors)
+  const [tooltip, setTooltip] = useState<{
+    text: string;
+    x: number;
+    y: number;
+    position: "top" | "bottom";
+  } | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Shortcuts state
   const [useModifiers, setUseModifiers] = useState(true); // Default to true (Command+R etc)
@@ -316,13 +352,13 @@ export default function Home() {
       // Initial state will be updated in useEffect
       return SHORTCUT_DEFS.reduce(
         (acc, def) => ({ ...acc, [def.id]: def.default }),
-        {} as Record<ActionId, ShortcutKey>
+        {} as Record<ActionId, ShortcutKey>,
       );
-    }
+    },
   );
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [editingShortcutId, setEditingShortcutId] = useState<ActionId | null>(
-    null
+    null,
   );
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
@@ -345,7 +381,7 @@ export default function Home() {
 
     // Load modifier setting
     const savedUseModifiers = localStorage.getItem(
-      "medical-scribe-use-modifiers"
+      "medical-scribe-use-modifiers",
     );
     if (savedUseModifiers !== null) {
       setUseModifiers(savedUseModifiers === "true");
@@ -353,7 +389,7 @@ export default function Home() {
 
     // Load AI model setting
     const savedModel = localStorage.getItem(
-      "medical-scribe-model"
+      "medical-scribe-model",
     ) as ModelId | null;
     if (savedModel && AVAILABLE_MODELS.some((m) => m.id === savedModel)) {
       setSelectedModel(savedModel);
@@ -370,6 +406,42 @@ export default function Home() {
     localStorage.setItem("medical-scribe-model", selectedModel);
   }, [selectedModel]);
 
+  // Clock update - every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Recording elapsed time update
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isRecording && recordingStartTime) {
+      timer = setInterval(() => {
+        const elapsed = Math.floor(
+          (Date.now() - recordingStartTime.getTime()) / 1000,
+        );
+        setRecordingElapsed(elapsed);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isRecording, recordingStartTime]);
+
+  // Load/Save clock visibility setting
+  useEffect(() => {
+    const savedShowClock = localStorage.getItem("medical-scribe-show-clock");
+    if (savedShowClock !== null) {
+      setShowClock(savedShowClock === "true");
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("medical-scribe-show-clock", String(showClock));
+  }, [showClock]);
+
   // Theme management - Apply theme
   useEffect(() => {
     const applyTheme = () => {
@@ -377,7 +449,7 @@ export default function Home() {
 
       if (theme === "system") {
         const prefersDark = window.matchMedia(
-          "(prefers-color-scheme: dark)"
+          "(prefers-color-scheme: dark)",
         ).matches;
         if (prefersDark) {
           root.setAttribute("data-theme", "dark");
@@ -435,7 +507,7 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem(
       "medical-scribe-shortcuts-v4",
-      JSON.stringify(shortcuts)
+      JSON.stringify(shortcuts),
     );
   }, [shortcuts]);
 
@@ -508,7 +580,7 @@ export default function Home() {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       const japaneseVoices = voices.filter((voice) =>
-        voice.lang.startsWith("ja")
+        voice.lang.startsWith("ja"),
       );
       setAvailableVoices(japaneseVoices);
       if (japaneseVoices.length > 0 && selectedVoiceIndex === 0) {
@@ -570,13 +642,106 @@ export default function Home() {
     };
   }, [showExportMenu]);
 
+  // Close model menu when clicking outside
+  useEffect(() => {
+    if (!isModelMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modelMenuRef.current &&
+        !modelMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsModelMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isModelMenuOpen]);
+
+  // Portal tooltip - global event delegation to escape overflow:hidden ancestors
+  const hideTooltip = useCallback(() => {
+    tooltipTimeoutRef.current = setTimeout(() => setTooltip(null), 50);
+  }, []);
+
+  useEffect(() => {
+    const SELECTOR = "[data-tooltip], [data-tooltip-bottom]";
+
+    const showTooltip = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest?.(SELECTOR) as HTMLElement | null;
+      if (!target) return;
+
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+        tooltipTimeoutRef.current = null;
+      }
+
+      const isBottom = target.hasAttribute("data-tooltip-bottom");
+      const text = target.getAttribute(isBottom ? "data-tooltip-bottom" : "data-tooltip");
+      if (!text) return;
+
+      const rect = target.getBoundingClientRect();
+      const x = Math.max(60, Math.min(window.innerWidth - 60, rect.left + rect.width / 2));
+      const y = isBottom ? rect.bottom + 8 : rect.top - 8;
+
+      setTooltip({ text, x, y, position: isBottom ? "bottom" : "top" });
+    };
+
+    const handleOut = (e: MouseEvent) => {
+      const related = e.relatedTarget as HTMLElement | null;
+      if (related?.closest?.(SELECTOR)) return;
+      hideTooltip();
+    };
+
+    const handleScroll = () => setTooltip(null);
+
+    document.addEventListener("mouseover", showTooltip, true);
+    document.addEventListener("mouseout", handleOut, true);
+    document.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      document.removeEventListener("mouseover", showTooltip, true);
+      document.removeEventListener("mouseout", handleOut, true);
+      document.removeEventListener("scroll", handleScroll, true);
+      if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+    };
+  }, [hideTooltip]);
+
   const toggleRecording = () => {
     if (isRecording) {
       recognitionRef.current?.stop();
+      setRecordingStartTime(null);
+      setRecordingElapsed(0);
     } else {
       recognitionRef.current?.start();
+      setRecordingStartTime(new Date());
+      setRecordingElapsed(0);
     }
     setIsRecording(!isRecording);
+  };
+
+  // Format time as HH:MM:SS
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  };
+
+  // Format elapsed time as MM:SS or HH:MM:SS
+  const formatElapsedTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${minutes.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   const handleAnalyze = async () => {
@@ -587,6 +752,10 @@ export default function Home() {
     setError(null);
     setResult(null);
     setTokenUsage(null);
+    setAnalysisProgress(0);
+
+    // Estimated JSON size for progress calculation (typically 2000-4000 chars)
+    const ESTIMATED_RESPONSE_SIZE = 3000;
 
     try {
       const res = await fetch("/api/analyze", {
@@ -604,14 +773,19 @@ export default function Home() {
         setError(errorData.error || "APIエラーが発生しました");
         setIsStreaming(false);
         setLoading(false);
+        setAnalysisProgress(0);
         return;
       }
+
+      // API connection established
+      setAnalysisProgress(10);
 
       const reader = res.body?.getReader();
       if (!reader) {
         setError("ストリーミングレスポンスの取得に失敗しました");
         setIsStreaming(false);
         setLoading(false);
+        setAnalysisProgress(0);
         return;
       }
 
@@ -643,24 +817,28 @@ export default function Home() {
                   setError(data.error);
                   setIsStreaming(false);
                   setLoading(false);
+                  setAnalysisProgress(0);
                   return;
                 }
 
                 if (data.done) {
                   streamCompleted = true;
+                  setAnalysisProgress(100);
                   // Parse the accumulated JSON
                   try {
                     const parsedResult = JSON.parse(accumulatedText);
                     if (!parsedResult.soap) {
                       setError(
-                        "AIの応答形式が不正です。もう一度お試しください。"
+                        "AIの応答形式が不正です。もう一度お試しください。",
                       );
+                      setAnalysisProgress(0);
                     } else {
                       setResult(parsedResult);
                     }
                   } catch (parseError) {
                     console.error("JSON parse error:", parseError);
                     setError("AIの応答を解析できませんでした。");
+                    setAnalysisProgress(0);
                   }
                   // Save token usage if available
                   if (data.usage) {
@@ -674,6 +852,15 @@ export default function Home() {
                 if (data.content) {
                   accumulatedText += data.content;
                   setStreamingText(accumulatedText);
+                  // Update progress based on received data (10-95%)
+                  const progress = Math.min(
+                    95,
+                    10 +
+                      Math.floor(
+                        (accumulatedText.length / ESTIMATED_RESPONSE_SIZE) * 85,
+                      ),
+                  );
+                  setAnalysisProgress(progress);
                 }
               } catch {
                 // Ignore JSON parse errors for incomplete chunks
@@ -694,13 +881,15 @@ export default function Home() {
           }
         } catch {
           setError("ストリームが予期せず終了しました。");
+          setAnalysisProgress(0);
         }
       }
     } catch (e) {
       console.error(e);
       setError(
-        "エラーが発生しました。APIキーとネットワーク接続を確認してください。"
+        "エラーが発生しました。APIキーとネットワーク接続を確認してください。",
       );
+      setAnalysisProgress(0);
     } finally {
       setIsStreaming(false);
       setLoading(false);
@@ -713,7 +902,7 @@ export default function Home() {
     const hasContent = transcript.length > 0 || result !== null;
     if (hasContent) {
       const confirmed = window.confirm(
-        "入力内容と生成結果をすべて削除しますか？\nこの操作は取り消せません。"
+        "入力内容と生成結果をすべて削除しますか？\nこの操作は取り消せません。",
       );
       if (!confirmed) return;
     }
@@ -744,7 +933,7 @@ export default function Home() {
 
   const handleResetSettings = () => {
     const confirmed = window.confirm(
-      "すべての設定（テーマ・ショートカット）をリセットしますか？"
+      "すべての設定（テーマ・ショートカット）をリセットしますか？",
     );
     if (confirmed) {
       setTheme("system");
@@ -916,7 +1105,7 @@ export default function Home() {
       text += `現病歴:\n${result.soap.subjective.presentIllness}\n\n`;
     }
     if (
-      result.soap.subjective?.symptoms &&
+      Array.isArray(result.soap.subjective?.symptoms) &&
       result.soap.subjective.symptoms.length > 0
     ) {
       text += `症状:\n${result.soap.subjective.symptoms
@@ -961,7 +1150,7 @@ export default function Home() {
       text += "\n";
     }
     if (
-      result.soap.assessment?.differentialDiagnosis &&
+      Array.isArray(result.soap.assessment?.differentialDiagnosis) &&
       result.soap.assessment.differentialDiagnosis.length > 0
     ) {
       text += `鑑別診断:\n${result.soap.assessment.differentialDiagnosis
@@ -981,7 +1170,7 @@ export default function Home() {
       text += `治療方針:\n${result.soap.plan.treatment}\n\n`;
     }
     if (
-      result.soap.plan?.medications &&
+      Array.isArray(result.soap.plan?.medications) &&
       result.soap.plan.medications.length > 0
     ) {
       text += "処方:\n";
@@ -1010,7 +1199,7 @@ export default function Home() {
     // File size limit
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setError(
-        "ファイルサイズが大きすぎます。10MB以下のファイルを選択してください。"
+        "ファイルサイズが大きすぎます。10MB以下のファイルを選択してください。",
       );
       return;
     }
@@ -1039,7 +1228,7 @@ export default function Home() {
         // Schema validation
         if (!imported.soap || !imported.patientInfo) {
           throw new Error(
-            "SOAPノート形式が正しくありません。soapまたはpatientInfoが見つかりません。"
+            "SOAPノート形式が正しくありません。soapまたはpatientInfoが見つかりません。",
           );
         }
 
@@ -1080,7 +1269,7 @@ export default function Home() {
         // Handle JSON syntax errors specifically
         if (err instanceof SyntaxError) {
           setError(
-            "ファイルの読み込みに失敗しました。正しいJSON形式のSOAPカルテファイルか確認してください。"
+            "ファイルの読み込みに失敗しました。正しいJSON形式のSOAPカルテファイルか確認してください。",
           );
         } else {
           setError(errorMessage);
@@ -1150,7 +1339,7 @@ export default function Home() {
     }
     if (soapNote.soap.assessment?.differentialDiagnosis?.length > 0) {
       text += `鑑別診断、${soapNote.soap.assessment.differentialDiagnosis.join(
-        "、"
+        "、",
       )}。`;
     }
     text += "\n\n";
@@ -1491,9 +1680,9 @@ export default function Home() {
       {/* Minimal header - sticky */}
       <header className="app-header flex-shrink-0">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-12">
-            {/* Branding */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="relative flex items-center justify-between h-12 sm:h-14">
+            {/* Branding + Clock */}
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-shrink-0">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
                   <MicrophoneIcon
@@ -1502,16 +1691,37 @@ export default function Home() {
                     aria-hidden="true"
                   />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 hidden sm:block">
                   <h1 className="text-sm sm:text-lg font-bold text-theme-primary leading-none truncate">
-                    <span className="sm:hidden">Voice Scribe</span>
-                    <span className="hidden sm:inline">Medical Voice Scribe</span>
+                    Medical Voice Scribe
                   </h1>
-                  <p className="hidden sm:block text-xs text-theme-secondary font-medium mt-0.5">
+                  <p className="text-xs text-theme-secondary font-medium mt-0.5">
                     AI音声問診・カルテ自動生成
                   </p>
                 </div>
               </div>
+
+              {/* Clock and Recording Timer - next to logo */}
+              {mounted && showClock && (
+                <div className="flex flex-col items-center">
+                  <time
+                    className="text-lg sm:text-xl md:text-2xl font-bold text-gray-400 dark:text-gray-500 font-mono tabular-nums"
+                    dateTime={currentTime.toISOString()}
+                    aria-label="現在時刻"
+                    suppressHydrationWarning
+                  >
+                    {formatTime(currentTime)}
+                  </time>
+                  {isRecording && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                      <span className="text-xs font-mono text-orange-500 tabular-nums">
+                        {formatElapsedTime(recordingElapsed)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Status indicator */}
@@ -1528,49 +1738,136 @@ export default function Home() {
               </div>
 
               {/* AI Model selector */}
-              <div className="relative group">
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-3 pr-8 py-1.5 text-xs text-theme-primary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <div className="relative" ref={modelMenuRef}>
+                <button
+                  onClick={() => {
+                    const opening = !isModelMenuOpen;
+                    setIsModelMenuOpen(opening);
+                    if (opening) {
+                      setHighlightedModelIndex(
+                        AVAILABLE_MODELS.findIndex(
+                          (m) => m.id === selectedModel,
+                        ),
+                      );
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      if (!isModelMenuOpen) {
+                        setIsModelMenuOpen(true);
+                        setHighlightedModelIndex(
+                          AVAILABLE_MODELS.findIndex(
+                            (m) => m.id === selectedModel,
+                          ),
+                        );
+                      }
+                    } else if (e.key === "Escape" && isModelMenuOpen) {
+                      setIsModelMenuOpen(false);
+                    }
+                  }}
+                  className="flex items-center justify-between min-w-[180px] bg-theme-card border border-theme-border rounded-lg pl-3 pr-2 py-1.5 text-[11px] text-theme-tertiary cursor-pointer hover:border-theme-border-hover focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   aria-label="AIモデル選択"
-                  title={(() => {
-                    const m = AVAILABLE_MODELS.find(m => m.id === selectedModel);
-                    return m ? `${m.name}\n${m.description}\n速度: ${'⚡'.repeat(m.speed)} 品質: ${'★'.repeat(m.quality)}` : '';
-                  })()}
+                  aria-expanded={isModelMenuOpen}
+                  aria-haspopup="listbox"
                 >
-                  {AVAILABLE_MODELS.map((model) => (
-                    <option key={model.id} value={model.id} title={`${model.description} | 速度:${model.speed}/5 品質:${model.quality}/5`}>
-                      {model.name} ({model.description})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDownIcon
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-tertiary pointer-events-none"
-                  aria-hidden="true"
-                />
-                {/* Model info tooltip */}
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-64 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs">
-                  <div className="font-semibold text-theme-primary mb-2">モデル比較</div>
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-theme-tertiary">
-                        <th className="text-left pb-1">モデル</th>
-                        <th className="text-center pb-1">速度</th>
-                        <th className="text-center pb-1">品質</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-theme-secondary">
-                      {AVAILABLE_MODELS.map((m) => (
-                        <tr key={m.id} className={m.id === selectedModel ? 'text-theme-primary font-medium' : ''}>
-                          <td className="py-0.5">{m.name.replace('GPT-', '')}</td>
-                          <td className="text-center">{'⚡'.repeat(m.speed)}</td>
-                          <td className="text-center">{'★'.repeat(m.quality)}</td>
-                        </tr>
+                  <span className="truncate mr-2">
+                    {(() => {
+                      const m = AVAILABLE_MODELS.find(
+                        (m) => m.id === selectedModel,
+                      );
+                      return m
+                        ? `${m.name} (${m.description})`
+                        : "モデルを選択";
+                    })()}
+                  </span>
+                  <ChevronDownIcon
+                    className={`w-4 h-4 text-theme-muted transition-transform duration-200 ${isModelMenuOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {/* Model selection menu */}
+                {isModelMenuOpen && (
+                  <div
+                    className="absolute left-0 top-full mt-2 z-50 w-72 p-3 bg-theme-card border border-theme-border rounded-lg shadow-lg text-xs animate-fade-in"
+                    role="listbox"
+                    aria-label="AIモデル一覧"
+                    aria-activedescendant={
+                      highlightedModelIndex >= 0
+                        ? `model-option-${AVAILABLE_MODELS[highlightedModelIndex]?.id}`
+                        : undefined
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setIsModelMenuOpen(false);
+                        modelMenuRef.current?.querySelector("button")?.focus();
+                      } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setHighlightedModelIndex((prev) =>
+                          Math.min(prev + 1, AVAILABLE_MODELS.length - 1),
+                        );
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setHighlightedModelIndex((prev) =>
+                          Math.max(prev - 1, 0),
+                        );
+                      } else if (e.key === "Enter") {
+                        if (highlightedModelIndex >= 0) {
+                          setSelectedModel(
+                            AVAILABLE_MODELS[highlightedModelIndex].id,
+                          );
+                        }
+                        setIsModelMenuOpen(false);
+                        modelMenuRef.current?.querySelector("button")?.focus();
+                      }
+                    }}
+                  >
+                    <div className="font-medium text-theme-secondary text-[11px] mb-2 px-2">
+                      モデル選択
+                    </div>
+                    <div className="grid grid-cols-[60px_80px_60px] gap-2 px-2 py-1.5 text-[10px] text-theme-tertiary border-b border-theme-border mb-1">
+                      <div>モデル</div>
+                      <div>速度</div>
+                      <div>品質</div>
+                    </div>
+                    <div className="space-y-0.5" role="presentation">
+                      {AVAILABLE_MODELS.map((m, index) => (
+                        <button
+                          key={m.id}
+                          id={`model-option-${m.id}`}
+                          role="option"
+                          aria-selected={m.id === selectedModel}
+                          onClick={() => {
+                            setSelectedModel(m.id);
+                            setIsModelMenuOpen(false);
+                          }}
+                          onMouseEnter={() => setHighlightedModelIndex(index)}
+                          className={`w-full grid grid-cols-[60px_80px_60px] gap-2 px-2 py-1.5 rounded text-left transition-colors items-center ${
+                            m.id === selectedModel
+                              ? "bg-theme-highlight text-theme-primary font-medium"
+                              : index === highlightedModelIndex
+                                ? "bg-theme-bg-secondary text-theme-primary"
+                                : "text-theme-secondary hover:bg-theme-bg-secondary hover:text-theme-primary"
+                          }`}
+                        >
+                          <div className="truncate">
+                            {m.name.replace("GPT-", "")}
+                          </div>
+                          <div className="text-amber-500 text-[10px]">
+                            {"⚡".repeat(m.speed)}
+                          </div>
+                          <div
+                            className={`text-[10px] ${m.id === selectedModel ? "text-amber-500" : "text-theme-tertiary"}`}
+                          >
+                            {"★".repeat(m.quality)}
+                            {"☆".repeat(5 - m.quality)}
+                          </div>
+                        </button>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Icon buttons - unified grid */}
@@ -1580,7 +1877,7 @@ export default function Home() {
                   onClick={() => setShowShortcutsModal(true)}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
                   aria-label="キーボード設定"
-                  data-tooltip="ショートカット設定"
+                  data-tooltip-bottom="ショートカット設定"
                 >
                   <KeyboardIcon className="w-6 h-6" aria-hidden="true" />
                 </button>
@@ -1590,12 +1887,12 @@ export default function Home() {
                   onClick={handleThemeCycle}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
                   aria-label="テーマ切り替え"
-                  data-tooltip={`テーマ: ${
+                  data-tooltip-bottom={`テーマ: ${
                     theme === "system"
                       ? "自動"
                       : theme === "light"
-                      ? "ライト"
-                      : "ダーク"
+                        ? "ライト"
+                        : "ダーク"
                   }`}
                 >
                   {theme === "light" && (
@@ -1617,12 +1914,9 @@ export default function Home() {
                   onClick={() => setShowHelp(true)}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-theme-tertiary btn-theme-hover"
                   aria-label="ヘルプを表示"
-                  data-tooltip="ヘルプ"
+                  data-tooltip-bottom="ヘルプ"
                 >
-                  <QuestionMarkCircleIcon
-                    className="w-6 h-6"
-                    aria-hidden="true"
-                  />
+                  <HelpOutlineIcon className="w-6 h-6" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -1640,17 +1934,17 @@ export default function Home() {
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-2 pr-6 py-1 text-sm text-theme-primary cursor-pointer"
+                  className="appearance-none bg-theme-card border border-theme-border rounded-lg pl-2 pr-6 py-1 text-xs text-theme-tertiary cursor-pointer"
                   aria-label="AIモデル選択"
                 >
                   {AVAILABLE_MODELS.map((model) => (
                     <option key={model.id} value={model.id}>
-                      {model.name.replace('GPT-', '')}
+                      {model.name.replace("GPT-", "")}
                     </option>
                   ))}
                 </select>
                 <ChevronDownIcon
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-theme-tertiary pointer-events-none"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-theme-muted pointer-events-none"
                   aria-hidden="true"
                 />
               </div>
@@ -1660,6 +1954,13 @@ export default function Home() {
                 onClick={handleThemeCycle}
                 className="p-1 rounded-lg text-theme-tertiary btn-theme-hover"
                 aria-label="テーマ切り替え"
+                data-tooltip-bottom={`テーマ: ${
+                  theme === "system"
+                    ? "自動"
+                    : theme === "light"
+                      ? "ライト"
+                      : "ダーク"
+                }`}
               >
                 {theme === "light" && (
                   <SunIcon className="w-4 h-4" aria-hidden="true" />
@@ -1676,11 +1977,9 @@ export default function Home() {
                 onClick={() => setShowHelp(true)}
                 className="p-1 rounded-lg text-theme-tertiary btn-theme-hover"
                 aria-label="ヘルプ"
+                data-tooltip-bottom="ヘルプ"
               >
-                <QuestionMarkCircleIcon
-                  className="w-4 h-4"
-                  aria-hidden="true"
-                />
+                <HelpOutlineIcon className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -1707,7 +2006,7 @@ export default function Home() {
                     <MicrophoneIcon className="w-4 h-4" aria-hidden="true" />
                   )}
                   {isRecording ? "停止" : "録音"}
-                  <span className="text-xs opacity-70 ml-1">
+                  <span className="hidden sm:inline text-xs opacity-70 ml-1">
                     [{formatShortcut(shortcuts.toggleRecording, true)}]
                   </span>
                 </button>
@@ -1727,35 +2026,35 @@ export default function Home() {
                     <>
                       <SparklesIcon className="w-4 h-4" aria-hidden="true" />
                       カルテ生成
-                      <span className="text-xs opacity-70 ml-1">
+                      <span className="hidden sm:inline text-xs opacity-70 ml-1">
                         [{formatShortcut(shortcuts.analyze, true)}]
                       </span>
                     </>
                   )}
                 </button>
 
-                {/* Character count */}
+                {/* Clear button - モバイルでは横並び */}
+                <button
+                  onClick={handleClear}
+                  disabled={!transcript && !result}
+                  className="btn btn-secondary"
+                  aria-label="すべてクリア"
+                  data-tooltip="入力とカルテをすべて削除"
+                >
+                  <TrashIcon className="w-4 h-4" aria-hidden="true" />
+                  クリア
+                  <span className="hidden sm:inline text-xs opacity-70 ml-1">
+                    [{formatShortcut(shortcuts.clear, true)}]
+                  </span>
+                </button>
+
+                {/* Character count - デスクトップのみ */}
                 {transcript && (
-                  <div className="text-sm text-theme-tertiary font-mono ml-2">
+                  <div className="hidden sm:block text-sm text-theme-tertiary font-mono ml-2">
                     {transcript.length} 文字
                   </div>
                 )}
               </div>
-
-              {/* Clear button - Right side */}
-              <button
-                onClick={handleClear}
-                disabled={!transcript && !result}
-                className="btn btn-secondary"
-                aria-label="すべてクリア"
-                data-tooltip="入力とカルテをすべて削除"
-              >
-                <TrashIcon className="w-4 h-4" aria-hidden="true" />
-                クリア
-                <span className="text-xs opacity-70 ml-1">
-                  [{formatShortcut(shortcuts.clear, true)}]
-                </span>
-              </button>
             </div>
           </div>
 
@@ -1786,8 +2085,8 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <h2 className="panel-title">会話テキスト</h2>
-                      {/* Shortcut mode toggle */}
-                      <div className="flex items-center gap-1.5 text-xs text-theme-secondary">
+                      {/* Shortcut mode toggle - デスクトップのみ */}
+                      <div className="hidden sm:flex items-center gap-1.5 text-xs text-theme-secondary">
                         <button
                           onClick={() =>
                             handleUseModifiersChange(!useModifiers)
@@ -1860,11 +2159,11 @@ export default function Home() {
                 aria-label="レイアウト調整"
               >
                 {/* Layout preset buttons - Top positioned */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-10">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-50">
                   <button
                     onClick={() => setLayoutPreset("left")}
                     className="layout-btn group"
-                    title="左側を広く"
+                    data-tooltip-bottom="左側を広く"
                     aria-label="左側を広くする"
                   >
                     <svg
@@ -1894,7 +2193,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("equal")}
                     className="layout-btn group"
-                    title="均等"
+                    data-tooltip-bottom="均等"
                     aria-label="左右を均等にする"
                   >
                     <svg
@@ -1924,7 +2223,7 @@ export default function Home() {
                   <button
                     onClick={() => setLayoutPreset("right")}
                     className="layout-btn group"
-                    title="右側を広く"
+                    data-tooltip-bottom="右側を広く"
                     aria-label="右側を広くする"
                   >
                     <svg
@@ -1988,26 +2287,21 @@ export default function Home() {
               <div className="panel h-full flex flex-col lg:ml-0 overflow-hidden">
                 <div className="panel-header">
                   <div className="flex items-center justify-between">
-                    {/* Mobile layout */}
+                    {/* Mobile layout - 1行に横並び */}
                     {!isLargeScreen ? (
-                      <div className="w-full space-y-2">
-                        {/* 1段目: 戻るボタンと見出し */}
-                        <div className="flex items-center justify-between">
-                          <button
-                            onClick={() => setActivePanel("transcript")}
-                            className="btn btn-secondary py-1 px-2 text-xs flex items-center gap-1"
-                            aria-label="会話テキストに戻る"
-                            data-tooltip="会話テキストに戻る"
-                          >
-                            <ArrowLeftIcon className="w-4 h-4" />
-                            <span>会話</span>
-                          </button>
-                          <h2 className="panel-title text-sm whitespace-nowrap">
-                            カルテ
-                          </h2>
-                        </div>
-                        {/* 2段目: アクションボタン群 */}
-                        <div className="flex items-center justify-end gap-1">
+                      <div className="w-full flex items-center justify-between gap-2">
+                        {/* 左: 戻るボタン */}
+                        <button
+                          onClick={() => setActivePanel("transcript")}
+                          className="btn btn-secondary py-1 px-2 text-xs flex items-center gap-1 shrink-0"
+                          aria-label="会話テキストに戻る"
+                          data-tooltip="会話テキストに戻る"
+                        >
+                          <ArrowLeftIcon className="w-4 h-4" />
+                          <span>会話</span>
+                        </button>
+                        {/* 右: アクションボタン群 */}
+                        <div className="flex items-center gap-1">
                           {/* Import button */}
                           <button
                             onClick={handleImportClick}
@@ -2090,8 +2384,10 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="w-full flex items-center justify-between">
-                        {/* 左: 見出し */}
-                        <h2 className="panel-title whitespace-nowrap text-sm">カルテ</h2>
+                        {/* 左: 見出し - デスクトップのみ表示 */}
+                        <h2 className="hidden sm:block panel-title whitespace-nowrap text-sm">
+                          カルテ
+                        </h2>
 
                         {/* 中央: Voice */}
                         <div className="flex items-center gap-1">
@@ -2099,18 +2395,31 @@ export default function Home() {
                             onClick={toggleSpeech}
                             disabled={!result}
                             className="btn btn-secondary text-xs py-0.5 px-2"
-                            aria-label={isSpeaking ? "読み上げを停止" : "カルテを読み上げ"}
+                            aria-label={
+                              isSpeaking ? "読み上げを停止" : "カルテを読み上げ"
+                            }
                             data-tooltip={`読み上げ [${formatShortcut(shortcuts.toggleSpeech, true)}]`}
                           >
                             {isSpeaking ? (
-                              <StopIconSolid className="w-3.5 h-3.5" aria-hidden="true" />
+                              <StopIconSolid
+                                className="w-3.5 h-3.5"
+                                aria-hidden="true"
+                              />
                             ) : (
-                              <SpeakerWaveIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                              <SpeakerWaveIcon
+                                className="w-3.5 h-3.5"
+                                aria-hidden="true"
+                              />
                             )}
                             <span className="text-xs">Voice</span>
+                            <span className="hidden sm:inline text-xs opacity-70 ml-0.5">
+                              [{formatShortcut(shortcuts.toggleSpeech, true)}]
+                            </span>
                           </button>
                           <button
-                            onClick={() => setShowSpeechSettings(!showSpeechSettings)}
+                            onClick={() =>
+                              setShowSpeechSettings(!showSpeechSettings)
+                            }
                             disabled={!result}
                             className="btn btn-secondary text-xs p-1"
                             aria-label="音声設定"
@@ -2132,7 +2441,10 @@ export default function Home() {
                             aria-label="カルテをインポート"
                             data-tooltip="インポート"
                           >
-                            <ArrowUpTrayIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                            <ArrowUpTrayIcon
+                              className="w-3.5 h-3.5"
+                              aria-hidden="true"
+                            />
                           </button>
 
                           {/* Export dropdown */}
@@ -2144,7 +2456,10 @@ export default function Home() {
                               aria-label="カルテをエクスポート"
                               data-tooltip="エクスポート"
                             >
-                              <ArrowDownTrayIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                              <ArrowDownTrayIcon
+                                className="w-3.5 h-3.5"
+                                aria-hidden="true"
+                              />
                               <ChevronDownIcon
                                 className={`w-3 h-3 transition-transform ${showExportMenu ? "rotate-180" : ""}`}
                                 aria-hidden="true"
@@ -2182,7 +2497,10 @@ export default function Home() {
                             aria-label="カルテ全体をコピー"
                             data-tooltip="コピー"
                           >
-                            <ClipboardDocumentIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                            <ClipboardDocumentIcon
+                              className="w-3.5 h-3.5"
+                              aria-hidden="true"
+                            />
                           </button>
                         </div>
                       </div>
@@ -2272,6 +2590,7 @@ export default function Home() {
                           onClick={() => setError(null)}
                           className="text-red-600 hover:text-red-800"
                           aria-label="エラーメッセージを閉じる"
+                          data-tooltip="閉じる"
                         >
                           <svg
                             className="w-5 h-5"
@@ -2294,30 +2613,71 @@ export default function Home() {
                   {/* Empty state */}
                   {!result && !loading && !error && (
                     <div className="empty-state">
-                      <DocumentTextIcon
-                        className="empty-state-icon"
-                        aria-hidden="true"
-                      />
-                      <p className="empty-state-text">
-                        まだ解析されていません
-                        <br />
-                        会話を録音してSOAPカルテを生成してください
+                      <div className="w-20 h-20 mb-6 rounded-full bg-theme-tertiary flex items-center justify-center">
+                        <DocumentTextIcon
+                          className="w-10 h-10 text-theme-secondary opacity-50"
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <h3 className="text-lg font-bold text-theme-primary mb-2">SOAPカルテ生成へようこそ</h3>
+                      <p className="text-sm text-theme-secondary mb-8 max-w-sm mx-auto leading-relaxed">
+                        AIが医師と患者の会話を分析し、
+                        <br className="hidden sm:block" />
+                        標準的な医療記録形式（SOAP）でカルテを作成します。
                       </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-lg text-left">
+                        <div className="p-4 rounded-lg border border-theme-light bg-theme-card hover:shadow-md transition-shadow">
+                          <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold mb-3">
+                            1
+                          </div>
+                          <div className="font-bold text-sm text-theme-primary mb-1">
+                            録音
+                          </div>
+                          <div className="text-xs text-theme-secondary">
+                            「録音」ボタンを押して会話を開始
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg border border-theme-light bg-theme-card hover:shadow-md transition-shadow">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-bold mb-3">
+                            2
+                          </div>
+                          <div className="font-bold text-sm text-theme-primary mb-1">
+                            停止
+                          </div>
+                          <div className="text-xs text-theme-secondary">
+                            会話が終わったら録音を停止
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-lg border border-theme-light bg-theme-card hover:shadow-md transition-shadow">
+                          <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center text-sm font-bold mb-3">
+                            3
+                          </div>
+                          <div className="font-bold text-sm text-theme-primary mb-1">
+                            生成
+                          </div>
+                          <div className="text-xs text-theme-secondary">
+                            「カルテ生成」でAIが分析開始
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   {/* Loading/Streaming state */}
                   {loading && (
                     <div className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div
-                          className="loading-spinner animate-spin"
-                          style={{
-                            width: "1.5rem",
-                            height: "1.5rem",
-                            borderWidth: "2px",
-                          }}
-                        />
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="relative">
+                          <div
+                            className="loading-spinner animate-spin"
+                            style={{
+                              width: "1.5rem",
+                              height: "1.5rem",
+                              borderWidth: "2px",
+                            }}
+                          />
+                        </div>
                         <span
                           className="text-sm font-medium"
                           style={{ color: "var(--text-secondary)" }}
@@ -2327,11 +2687,31 @@ export default function Home() {
                             : "解析準備中..."}
                         </span>
                         <span
-                          className="text-xs"
+                          className="text-xs font-mono tabular-nums"
+                          style={{ color: "var(--accent-primary)" }}
+                        >
+                          {analysisProgress}%
+                        </span>
+                        <span
+                          className="text-xs ml-auto"
                           style={{ color: "var(--text-tertiary)" }}
                         >
-                          {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || selectedModel}
+                          {AVAILABLE_MODELS.find((m) => m.id === selectedModel)
+                            ?.name || selectedModel}
                         </span>
+                      </div>
+                      {/* Progress bar */}
+                      <div
+                        className="h-1 rounded-full mb-4 overflow-hidden"
+                        style={{ backgroundColor: "var(--bg-tertiary)" }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300 ease-out"
+                          style={{
+                            width: `${analysisProgress}%`,
+                            backgroundColor: "var(--accent-primary)",
+                          }}
+                        />
                       </div>
                       {isStreaming && streamingText && (
                         <div
@@ -2434,24 +2814,19 @@ export default function Home() {
 
                       {/* SOAP sections */}
                       <div className="soap-section subjective">
-                        <button
-                          onClick={copySectionS}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Sセクションをコピー"
-                          title="このセクションをコピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
-                            <div
-                              className="soap-badge"
-                              style={{ background: "var(--soap-s)" }}
-                            >
-                              S
-                            </div>
+                            <div className="soap-badge">S</div>
                             主観的情報
                           </div>
+                          <button
+                            onClick={copySectionS}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-theme-secondary"
+                            aria-label="Sセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.subjective?.presentIllness && (
@@ -2464,7 +2839,7 @@ export default function Home() {
                               </div>
                             </div>
                           )}
-                          {result.soap.subjective?.symptoms &&
+                          {Array.isArray(result.soap.subjective?.symptoms) &&
                             result.soap.subjective.symptoms.length > 0 && (
                               <div>
                                 <div className="font-bold text-xs text-theme-secondary mb-1">
@@ -2474,7 +2849,7 @@ export default function Home() {
                                   {result.soap.subjective.symptoms.map(
                                     (s: string, i: number) => (
                                       <li key={i}>{s}</li>
-                                    )
+                                    ),
                                   )}
                                 </ul>
                               </div>
@@ -2503,24 +2878,19 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section objective">
-                        <button
-                          onClick={copySectionO}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Oセクションをコピー"
-                          title="このセクションをコピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
-                            <div
-                              className="soap-badge"
-                              style={{ background: "var(--soap-o)" }}
-                            >
-                              O
-                            </div>
+                            <div className="soap-badge">O</div>
                             客観的情報
                           </div>
+                          <button
+                            onClick={copySectionO}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-theme-secondary"
+                            aria-label="Oセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.objective?.vitalSigns && (
@@ -2591,24 +2961,19 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section assessment">
-                        <button
-                          onClick={copySectionA}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Aセクションをコピー"
-                          title="このセクションをコピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
-                            <div
-                              className="soap-badge"
-                              style={{ background: "var(--soap-a)" }}
-                            >
-                              A
-                            </div>
+                            <div className="soap-badge">A</div>
                             評価・診断
                           </div>
+                          <button
+                            onClick={copySectionA}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-theme-secondary"
+                            aria-label="Aセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.assessment?.diagnosis && (
@@ -2626,7 +2991,9 @@ export default function Home() {
                               )}
                             </div>
                           )}
-                          {result.soap.assessment?.differentialDiagnosis &&
+                          {Array.isArray(
+                            result.soap.assessment?.differentialDiagnosis,
+                          ) &&
                             result.soap.assessment.differentialDiagnosis
                               .length > 0 && (
                               <div>
@@ -2637,7 +3004,7 @@ export default function Home() {
                                   {result.soap.assessment.differentialDiagnosis.map(
                                     (d: string, i: number) => (
                                       <li key={i}>{d}</li>
-                                    )
+                                    ),
                                   )}
                                 </ul>
                               </div>
@@ -2656,24 +3023,19 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section plan">
-                        <button
-                          onClick={copySectionP}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Pセクションをコピー"
-                          title="このセクションをコピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
-                            <div
-                              className="soap-badge"
-                              style={{ background: "var(--soap-p)" }}
-                            >
-                              P
-                            </div>
+                            <div className="soap-badge">P</div>
                             治療計画
                           </div>
+                          <button
+                            onClick={copySectionP}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-theme-secondary"
+                            aria-label="Pセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.plan?.treatment && (
@@ -2686,7 +3048,7 @@ export default function Home() {
                               </div>
                             </div>
                           )}
-                          {result.soap.plan?.medications &&
+                          {Array.isArray(result.soap.plan?.medications) &&
                             result.soap.plan.medications.length > 0 && (
                               <div>
                                 <div className="font-bold text-xs text-theme-secondary mb-2">
@@ -2723,12 +3085,12 @@ export default function Home() {
                                           </div>
                                         </div>
                                       </div>
-                                    )
+                                    ),
                                   )}
                                 </div>
                               </div>
                             )}
-                          {result.soap.plan?.tests &&
+                          {Array.isArray(result.soap.plan?.tests) &&
                             result.soap.plan.tests.length > 0 && (
                               <div>
                                 <div className="font-bold text-xs text-theme-secondary mb-1">
@@ -2738,7 +3100,7 @@ export default function Home() {
                                   {result.soap.plan.tests.map(
                                     (t: string, i: number) => (
                                       <li key={i}>{t}</li>
-                                    )
+                                    ),
                                   )}
                                 </ul>
                               </div>
@@ -2768,10 +3130,16 @@ export default function Home() {
 
                       {/* Generated timestamp and token usage */}
                       <div className="px-6 py-3 bg-theme-card text-xs text-theme-tertiary font-mono border-t border-theme-border flex items-center justify-between">
-                        <span>生成時刻: {new Date().toLocaleTimeString("ja-JP")}</span>
+                        <span>
+                          生成時刻: {new Date().toLocaleTimeString("ja-JP")}
+                        </span>
                         {tokenUsage && (
-                          <span className="opacity-60" title={`入力: ${tokenUsage.promptTokens} / 出力: ${tokenUsage.completionTokens}`}>
-                            {tokenUsage.totalTokens.toLocaleString()} tokens ≈ ¥{tokenUsage.estimatedCostJPY.toFixed(3)}
+                          <span
+                            className="opacity-60"
+                            title={`入力: ${tokenUsage.promptTokens} / 出力: ${tokenUsage.completionTokens}`}
+                          >
+                            {tokenUsage.totalTokens.toLocaleString()} tokens ≈ ¥
+                            {tokenUsage.estimatedCostJPY.toFixed(3)}
                           </span>
                         )}
                       </div>
@@ -2799,6 +3167,7 @@ export default function Home() {
                     }}
                     className="text-theme-tertiary hover:text-theme-primary transition-colors"
                     aria-label="プレビューを閉じる"
+                    data-tooltip-bottom="閉じる"
                   >
                     <XMarkIcon className="w-6 h-6" />
                   </button>
@@ -2852,7 +3221,7 @@ export default function Home() {
                       className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
                       style={{ background: "var(--gradient-primary)" }}
                     >
-                      <QuestionMarkCircleIcon className="w-6 h-6 text-white" />
+                      <HelpOutlineIcon className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-theme-primary">
                       使い方ガイド
@@ -2862,6 +3231,7 @@ export default function Home() {
                     onClick={() => setShowHelp(false)}
                     className="text-theme-tertiary hover:text-theme-primary transition-colors"
                     aria-label="ヘルプを閉じる"
+                    data-tooltip-bottom="閉じる"
                   >
                     <XMarkIcon className="w-6 h-6" />
                   </button>
@@ -3146,6 +3516,8 @@ export default function Home() {
                       setEditingShortcutId(null);
                     }}
                     className="text-theme-tertiary hover:text-theme-primary transition-colors"
+                    aria-label="閉じる"
+                    data-tooltip-bottom="閉じる"
                   >
                     <XMarkIcon className="w-6 h-6" />
                   </button>
@@ -3189,10 +3561,42 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Clock Toggle */}
+                  <div className="px-6 py-4 border-b border-theme-soft bg-theme-modal-content-alt">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-theme-primary">
+                          時計を表示
+                        </div>
+                        <div className="text-xs text-theme-secondary mt-0.5">
+                          ヘッダーに現在時刻と録音経過時間を表示します
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowClock(!showClock)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
+                          showClock
+                            ? "bg-teal-600"
+                            : "bg-gray-200 dark:bg-gray-700"
+                        }`}
+                        role="switch"
+                        aria-checked={showClock}
+                        aria-label="時計を表示"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            showClock ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="divide-y divide-theme-soft">
                     {SHORTCUT_GROUPS.map((group) => {
                       const groupShortcuts = SHORTCUT_DEFS.filter(
-                        (def) => def.group === group.id
+                        (def) => def.group === group.id,
                       );
                       if (groupShortcuts.length === 0) return null;
 
@@ -3248,7 +3652,7 @@ export default function Home() {
                                       onClick={() =>
                                         handleShortcutChange(
                                           def.id,
-                                          platformDefault
+                                          platformDefault,
                                         )
                                       }
                                       className="p-1.5 text-theme-tertiary hover:text-red-500 transition-colors"
@@ -3338,6 +3742,35 @@ export default function Home() {
         isRecording={isRecording}
         isAnalyzing={loading || isStreaming}
       />
+
+      {/* Portal tooltip - rendered at document.body to escape overflow:hidden */}
+      {typeof window !== "undefined" && tooltip &&
+        createPortal(
+          <div
+            className={`portal-tooltip ${tooltip.position === "bottom" ? "portal-tooltip-bottom" : ""}`}
+            style={{
+              position: "fixed",
+              left: tooltip.x,
+              top: tooltip.y,
+              transform:
+                tooltip.position === "top"
+                  ? "translateX(-50%) translateY(-100%)"
+                  : "translateX(-50%)",
+              zIndex: 99999,
+              pointerEvents: "none",
+            }}
+            role="tooltip"
+          >
+            {tooltip.position === "bottom" && (
+              <div className="portal-tooltip-arrow portal-tooltip-arrow-top" />
+            )}
+            <div className="portal-tooltip-content">{tooltip.text}</div>
+            {tooltip.position === "top" && (
+              <div className="portal-tooltip-arrow portal-tooltip-arrow-bottom" />
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
