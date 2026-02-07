@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { SoapNote, ModelId, TokenUsage } from "./api/analyze/types";
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from "./api/analyze/types";
 import {
@@ -338,6 +339,58 @@ export default function Home() {
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Portal tooltip state
+  const [tooltip, setTooltip] = useState<{
+    text: string;
+    x: number;
+    y: number;
+    position: "top" | "bottom";
+  } | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hideTooltip = useCallback(() => {
+    tooltipTimeoutRef.current = setTimeout(() => setTooltip(null), 50);
+  }, []);
+
+  // Global tooltip event delegation (Portal-based to escape overflow:hidden)
+  useEffect(() => {
+    const SELECTOR = "[data-tooltip], [data-tooltip-bottom]";
+
+    const showTooltip = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest?.(SELECTOR) as HTMLElement | null;
+      if (!target) return;
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+        tooltipTimeoutRef.current = null;
+      }
+      const isBottom = target.hasAttribute("data-tooltip-bottom");
+      const text = target.getAttribute(isBottom ? "data-tooltip-bottom" : "data-tooltip");
+      if (!text) return;
+      const rect = target.getBoundingClientRect();
+      const x = Math.max(60, Math.min(window.innerWidth - 60, rect.left + rect.width / 2));
+      const y = isBottom ? rect.bottom + 8 : rect.top - 8;
+      setTooltip({ text, x, y, position: isBottom ? "bottom" : "top" });
+    };
+
+    const handleOut = (e: MouseEvent) => {
+      const related = e.relatedTarget as HTMLElement | null;
+      if (related?.closest?.(SELECTOR)) return;
+      hideTooltip();
+    };
+
+    const handleScroll = () => setTooltip(null);
+
+    document.addEventListener("mouseover", showTooltip, true);
+    document.addEventListener("mouseout", handleOut, true);
+    document.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mouseover", showTooltip, true);
+      document.removeEventListener("mouseout", handleOut, true);
+      document.removeEventListener("scroll", handleScroll, true);
+      if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+    };
+  }, [hideTooltip]);
 
   // Theme management - Load from localStorage
   useEffect(() => {
@@ -3510,6 +3563,36 @@ export default function Home() {
         isRecording={isRecording}
         isAnalyzing={loading || isStreaming}
       />
+
+      {/* Portal Tooltip (renders at document.body to escape overflow:hidden) */}
+      {typeof window !== "undefined" &&
+        tooltip &&
+        createPortal(
+          <div
+            className={`portal-tooltip ${tooltip.position === "bottom" ? "portal-tooltip-bottom" : ""}`}
+            style={{
+              position: "fixed",
+              left: tooltip.x,
+              top: tooltip.y,
+              transform:
+                tooltip.position === "top"
+                  ? "translateX(-50%) translateY(-100%)"
+                  : "translateX(-50%)",
+              zIndex: 99999,
+              pointerEvents: "none",
+            }}
+            role="tooltip"
+          >
+            {tooltip.position === "bottom" && (
+              <div className="portal-tooltip-arrow portal-tooltip-arrow-top" />
+            )}
+            <div className="portal-tooltip-content">{tooltip.text}</div>
+            {tooltip.position === "top" && (
+              <div className="portal-tooltip-arrow portal-tooltip-arrow-bottom" />
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
