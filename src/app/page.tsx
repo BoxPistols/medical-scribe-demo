@@ -2623,14 +2623,6 @@ export default function Home() {
 
                       {/* SOAP sections */}
                       <div className="soap-section subjective">
-                        <button
-                          onClick={copySectionS}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Sセクションをコピー"
-                          data-tooltip="コピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div
@@ -2641,6 +2633,14 @@ export default function Home() {
                             </div>
                             主観的情報
                           </div>
+                          <button
+                            onClick={copySectionS}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            aria-label="Sセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4 opacity-60 hover:opacity-100" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.subjective?.presentIllness && (
@@ -2692,14 +2692,6 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section objective">
-                        <button
-                          onClick={copySectionO}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Oセクションをコピー"
-                          data-tooltip="コピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div
@@ -2710,6 +2702,14 @@ export default function Home() {
                             </div>
                             客観的情報
                           </div>
+                          <button
+                            onClick={copySectionO}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            aria-label="Oセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4 opacity-60 hover:opacity-100" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.objective?.vitalSigns && (
@@ -2780,14 +2780,6 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section assessment">
-                        <button
-                          onClick={copySectionA}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Aセクションをコピー"
-                          data-tooltip="コピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div
@@ -2798,6 +2790,14 @@ export default function Home() {
                             </div>
                             評価・診断
                           </div>
+                          <button
+                            onClick={copySectionA}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            aria-label="Aセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4 opacity-60 hover:opacity-100" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.assessment?.diagnosis && (
@@ -2845,14 +2845,6 @@ export default function Home() {
                       </div>
 
                       <div className="soap-section plan">
-                        <button
-                          onClick={copySectionP}
-                          className="absolute top-4 right-4 p-2 rounded hover:bg-white/10 transition-colors"
-                          aria-label="Pセクションをコピー"
-                          data-tooltip="コピー"
-                        >
-                          <ClipboardDocumentIcon className="w-5 h-5 text-current opacity-60 hover:opacity-100" />
-                        </button>
                         <div className="soap-label">
                           <div className="flex items-center gap-2">
                             <div
@@ -2863,6 +2855,14 @@ export default function Home() {
                             </div>
                             治療計画
                           </div>
+                          <button
+                            onClick={copySectionP}
+                            className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            aria-label="Pセクションをコピー"
+                            data-tooltip="コピー"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4 opacity-60 hover:opacity-100" />
+                          </button>
                         </div>
                         <div className="space-y-3 text-sm">
                           {result.soap.plan?.treatment && (
