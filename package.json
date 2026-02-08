@@ -10,11 +10,11 @@
     "test": "vitest",
     "test:run": "vitest run",
     "remotion:studio": "npx remotion studio src/remotion/index.ts",
-    "remotion:render": "npx remotion render src/remotion/index.ts ProductVideo out/video.mp4"
+    "remotion:render": "npx remotion render src/remotion/index.ts ProductVideo public/video.mp4"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@remotion/cli": "4.0.261",
+    "@remotion/google-fonts": "4.0.261",
     "@remotion/player": "4.0.261",
     "next": "16.1.6",
     "openai": "^6.17.0",
@@ -23,6 +23,7 @@
     "remotion": "4.0.261"
   },
   "devDependencies": {
+    "@remotion/cli": "4.0.261",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

@@ -6,6 +6,7 @@ import { SolutionScene } from "./components/SolutionScene";
 import { FeaturesScene } from "./components/FeaturesScene";
 import { HowItWorksScene } from "./components/HowItWorksScene";
 import { CtaScene } from "./components/CtaScene";
+import { FONT_FAMILY } from "./fonts";
 
 // 30fps, total ~40 seconds (1200 frames)
 // Scene durations in frames:
@@ -37,7 +38,7 @@ export const ProductVideo: React.FC = () => {
   ];
 
   return (
-    <AbsoluteFill style={{ background: "#0f172a" }}>
+    <AbsoluteFill style={{ background: "#0f172a", fontFamily: FONT_FAMILY }}>
       {scenes.map(({ Component, duration }, i) => {
         const from = offset;
         offset += duration;

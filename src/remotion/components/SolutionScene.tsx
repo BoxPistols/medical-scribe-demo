@@ -1,4 +1,5 @@
 import React from "react";
+import { CpuChipIcon } from "@heroicons/react/24/solid";
 import {
   AbsoluteFill,
   interpolate,
@@ -66,7 +67,6 @@ export const SolutionScene: React.FC = () => {
             letterSpacing: "0.15em",
             fontWeight: 600,
             margin: 0,
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           The Solution
@@ -77,7 +77,6 @@ export const SolutionScene: React.FC = () => {
             color: "white",
             fontWeight: 700,
             margin: "12px 0 0",
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           AIが診察をアシスト
@@ -132,7 +131,6 @@ export const SolutionScene: React.FC = () => {
                 fontSize: 16,
                 margin: "8px 0 0",
                 fontWeight: 600,
-                fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
               音声入力
@@ -183,14 +181,13 @@ export const SolutionScene: React.FC = () => {
               boxShadow: "0 0 60px rgba(20,184,166,0.15)",
             }}
           >
-            <div style={{ fontSize: 48 }}>🧠</div>
+            <CpuChipIcon style={{ width: 52, height: 52, color: "#14b8a6" }} />
             <p
               style={{
                 color: "#14b8a6",
                 fontSize: 18,
                 margin: "8px 0 0",
                 fontWeight: 700,
-                fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
               AI分析
@@ -200,7 +197,6 @@ export const SolutionScene: React.FC = () => {
                 color: "#5eead4",
                 fontSize: 12,
                 margin: "4px 0 0",
-                fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
               GPT-4 / GPT-5
@@ -274,7 +270,6 @@ export const SolutionScene: React.FC = () => {
                 fontSize: 16,
                 margin: "8px 0 0",
                 fontWeight: 600,
-                fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
               SOAPカルテ

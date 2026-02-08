@@ -1,5 +1,10 @@
 import React from "react";
 import {
+  CheckCircleIcon,
+  CpuChipIcon,
+  MicrophoneIcon,
+} from "@heroicons/react/24/solid";
+import {
   AbsoluteFill,
   interpolate,
   spring,
@@ -12,19 +17,19 @@ const steps = [
     num: "01",
     title: "診察を開始",
     desc: "ワンクリックで音声認識を開始。患者との自然な会話をリアルタイムでテキスト化",
-    icon: "🎙️",
+    Icon: MicrophoneIcon,
   },
   {
     num: "02",
     title: "AIが自動分析",
     desc: "会話内容をGPT-4/5が解析し、医学的に重要な情報を抽出・構造化",
-    icon: "🤖",
+    Icon: CpuChipIcon,
   },
   {
     num: "03",
     title: "SOAPカルテ完成",
     desc: "構造化されたSOAP形式の電子カルテが自動生成。エクスポートも簡単",
-    icon: "✅",
+    Icon: CheckCircleIcon,
   },
 ];
 
@@ -62,7 +67,6 @@ export const HowItWorksScene: React.FC = () => {
             letterSpacing: "0.15em",
             fontWeight: 600,
             margin: 0,
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           How It Works
@@ -73,7 +77,6 @@ export const HowItWorksScene: React.FC = () => {
             color: "white",
             fontWeight: 700,
             margin: "12px 0 0",
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           3ステップで完了
@@ -143,7 +146,9 @@ export const HowItWorksScene: React.FC = () => {
                     position: "relative",
                   }}
                 >
-                  <span style={{ fontSize: 48 }}>{step.icon}</span>
+                  <step.Icon
+                    style={{ width: 56, height: 56, color: "#14b8a6" }}
+                  />
                   {/* Step Number */}
                   <div
                     style={{
@@ -164,7 +169,6 @@ export const HowItWorksScene: React.FC = () => {
                         fontSize: 14,
                         fontWeight: 700,
                         color: "white",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
                       }}
                     >
                       {step.num}
@@ -179,7 +183,6 @@ export const HowItWorksScene: React.FC = () => {
                     color: "white",
                     fontWeight: 600,
                     margin: "0 0 12px",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
                   }}
                 >
                   {step.title}
@@ -192,7 +195,6 @@ export const HowItWorksScene: React.FC = () => {
                     color: "#94a3b8",
                     margin: 0,
                     lineHeight: 1.6,
-                    fontFamily: "system-ui, -apple-system, sans-serif",
                     maxWidth: 280,
                     marginLeft: "auto",
                     marginRight: "auto",

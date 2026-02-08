@@ -1,5 +1,13 @@
 import React from "react";
 import {
+  ArrowUpTrayIcon,
+  ClipboardDocumentIcon,
+  CommandLineIcon,
+  DevicePhoneMobileIcon,
+  MicrophoneIcon,
+  MoonIcon,
+} from "@heroicons/react/24/solid";
+import {
   AbsoluteFill,
   interpolate,
   spring,
@@ -8,12 +16,12 @@ import {
 } from "remotion";
 
 const highlights = [
-  { label: "リアルタイム音声認識", icon: "🎙️" },
-  { label: "SOAP形式カルテ自動生成", icon: "📋" },
-  { label: "JSON / CSV エクスポート", icon: "📤" },
-  { label: "ダークモード対応", icon: "🌙" },
-  { label: "キーボードショートカット", icon: "⌨️" },
-  { label: "PWA対応", icon: "📱" },
+  { label: "リアルタイム音声認識", Icon: MicrophoneIcon },
+  { label: "SOAP形式カルテ自動生成", Icon: ClipboardDocumentIcon },
+  { label: "JSON / CSV エクスポート", Icon: ArrowUpTrayIcon },
+  { label: "ダークモード対応", Icon: MoonIcon },
+  { label: "キーボードショートカット", Icon: CommandLineIcon },
+  { label: "PWA対応", Icon: DevicePhoneMobileIcon },
 ];
 
 export const CtaScene: React.FC = () => {
@@ -124,7 +132,6 @@ export const CtaScene: React.FC = () => {
               fontWeight: 800,
               color: "white",
               margin: 0,
-              fontFamily: "system-ui, -apple-system, sans-serif",
             }}
           >
             Medical Scribe
@@ -135,7 +142,6 @@ export const CtaScene: React.FC = () => {
               fontSize: 22,
               color: "#94a3b8",
               margin: "12px 0 0",
-              fontFamily: "system-ui, -apple-system, sans-serif",
             }}
           >
             医療現場のドキュメント作成を、もっとスマートに。
@@ -178,12 +184,11 @@ export const CtaScene: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <span style={{ fontSize: 16 }}>{h.icon}</span>
+                <h.Icon style={{ width: 16, height: 16, color: "#e2e8f0" }} />
                 <span
                   style={{
                     fontSize: 14,
                     color: "#e2e8f0",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
                   }}
                 >
                   {h.label}
@@ -213,7 +218,6 @@ export const CtaScene: React.FC = () => {
                 fontSize: 22,
                 fontWeight: 700,
                 color: "white",
-                fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
               今すぐ始める →
@@ -227,7 +231,6 @@ export const CtaScene: React.FC = () => {
             fontSize: 14,
             color: "#475569",
             margin: "16px 0 0",
-            fontFamily: "system-ui, -apple-system, sans-serif",
             opacity: interpolate(frame, [70, 85], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",

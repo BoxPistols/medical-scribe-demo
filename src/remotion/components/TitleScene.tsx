@@ -137,7 +137,6 @@ export const TitleScene: React.FC = () => {
               fontWeight: 800,
               color: "white",
               margin: 0,
-              fontFamily: "system-ui, -apple-system, sans-serif",
               letterSpacing: "-0.02em",
             }}
           >
@@ -159,7 +158,6 @@ export const TitleScene: React.FC = () => {
               fontSize: 28,
               color: "#94a3b8",
               margin: 0,
-              fontFamily: "system-ui, -apple-system, sans-serif",
               fontWeight: 400,
             }}
           >
@@ -170,7 +168,6 @@ export const TitleScene: React.FC = () => {
               fontSize: 20,
               color: "#64748b",
               margin: "12px 0 0",
-              fontFamily: "system-ui, -apple-system, sans-serif",
               fontWeight: 400,
             }}
           >

@@ -1,5 +1,10 @@
 import React from "react";
 import {
+  ClockIcon,
+  FaceFrownIcon,
+  PencilSquareIcon,
+} from "@heroicons/react/24/solid";
+import {
   AbsoluteFill,
   interpolate,
   spring,
@@ -9,17 +14,20 @@ import {
 
 const problems = [
   {
-    icon: "⏰",
+    Icon: ClockIcon,
+    color: "#f59e0b",
     title: "カルテ作成に膨大な時間",
     desc: "1日の診療時間の約40%がドキュメント作成に費やされています",
   },
   {
-    icon: "😓",
+    Icon: FaceFrownIcon,
+    color: "#f97316",
     title: "医師の燃え尽き症候群",
     desc: "事務作業の増加が医師の疲労とストレスの主要因に",
   },
   {
-    icon: "📝",
+    Icon: PencilSquareIcon,
+    color: "#38bdf8",
     title: "記録の正確性と一貫性",
     desc: "手動入力によるミスや記載漏れのリスク",
   },
@@ -70,7 +78,6 @@ export const ProblemScene: React.FC = () => {
             letterSpacing: "0.15em",
             fontWeight: 600,
             margin: 0,
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           The Problem
@@ -81,7 +88,6 @@ export const ProblemScene: React.FC = () => {
             color: "white",
             fontWeight: 700,
             margin: "12px 0 0",
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           医療現場が抱える課題
@@ -123,8 +129,14 @@ export const ProblemScene: React.FC = () => {
                 backdropFilter: "blur(10px)",
               }}
             >
-              <div style={{ fontSize: 48, marginBottom: 20 }}>
-                {problem.icon}
+              <div style={{ width: 48, height: 48, marginBottom: 20 }}>
+                <problem.Icon
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    color: problem.color,
+                  }}
+                />
               </div>
               <h3
                 style={{
@@ -132,7 +144,6 @@ export const ProblemScene: React.FC = () => {
                   color: "white",
                   fontWeight: 600,
                   margin: "0 0 12px",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
                 }}
               >
                 {problem.title}
@@ -143,7 +154,6 @@ export const ProblemScene: React.FC = () => {
                   color: "#94a3b8",
                   margin: 0,
                   lineHeight: 1.6,
-                  fontFamily: "system-ui, -apple-system, sans-serif",
                 }}
               >
                 {problem.desc}

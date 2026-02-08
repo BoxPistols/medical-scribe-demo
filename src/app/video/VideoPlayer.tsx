@@ -102,7 +102,7 @@ export const VideoPlayer: React.FC = () => {
             lineHeight: 1.6,
           }}
         >
-          npx remotion render src/remotion/index.ts ProductVideo out/video.mp4
+          npx remotion render src/remotion/index.ts ProductVideo public/video.mp4
         </code>
       </div>
 

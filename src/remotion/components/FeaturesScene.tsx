@@ -80,7 +80,6 @@ export const FeaturesScene: React.FC = () => {
             letterSpacing: "0.15em",
             fontWeight: 600,
             margin: 0,
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           SOAP Format
@@ -91,7 +90,6 @@ export const FeaturesScene: React.FC = () => {
             color: "white",
             fontWeight: 700,
             margin: "12px 0 0",
-            fontFamily: "system-ui, -apple-system, sans-serif",
           }}
         >
           構造化された電子カルテを自動生成
@@ -164,7 +162,6 @@ export const FeaturesScene: React.FC = () => {
                     fontSize: 28,
                     fontWeight: 800,
                     color: "white",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
                   }}
                 >
                   {feature.label}
@@ -178,7 +175,6 @@ export const FeaturesScene: React.FC = () => {
                   color: feature.color,
                   fontWeight: 600,
                   margin: "0 0 8px",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
                 }}
               >
                 {feature.title}
@@ -191,7 +187,6 @@ export const FeaturesScene: React.FC = () => {
                   color: "#94a3b8",
                   margin: "0 0 20px",
                   lineHeight: 1.5,
-                  fontFamily: "system-ui, -apple-system, sans-serif",
                 }}
               >
                 {feature.desc}
@@ -233,7 +228,6 @@ export const FeaturesScene: React.FC = () => {
                         style={{
                           fontSize: 14,
                           color: "#cbd5e1",
-                          fontFamily: "system-ui, -apple-system, sans-serif",
                         }}
                       >
                         {item}
