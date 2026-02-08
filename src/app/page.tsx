@@ -383,6 +383,7 @@ export default function Home() {
 
   // Help modal state
   const [showHelp, setShowHelp] = useState(false);
+  const [showOnboardingVideo, setShowOnboardingVideo] = useState(false);
 
   // Theme and settings state
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
@@ -552,6 +553,15 @@ export default function Home() {
     const savedShowClock = localStorage.getItem("medical-scribe-show-clock");
     if (savedShowClock !== null) {
       setShowClock(savedShowClock === "true");
+    }
+  }, []);
+
+  // Check for first-time user to show onboarding video
+  useEffect(() => {
+    const onboardingSeen = localStorage.getItem("medical-scribe-onboarding-seen");
+    if (!onboardingSeen) {
+      localStorage.setItem("medical-scribe-onboarding-seen", "true");
+      setShowOnboardingVideo(true);
     }
   }, []);
 
@@ -3261,13 +3271,86 @@ export default function Home() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-theme-soft bg-theme-modal-footer flex justify-end rounded-b-2xl">
+                <div className="px-6 py-4 border-t border-theme-soft bg-theme-modal-footer flex justify-between items-center rounded-b-2xl">
+                  <button
+                    onClick={() => {
+                      setShowHelp(false);
+                      setShowOnboardingVideo(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors border border-theme-border rounded-lg hover:bg-theme-card"
+                  >
+                    <PlayIcon className="w-4 h-4" />
+                    デモ動画を見る
+                  </button>
                   <button
                     onClick={() => setShowHelp(false)}
                     className="px-5 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors whitespace-nowrap"
                     style={{ background: "var(--gradient-primary)" }}
                   >
                     閉じる
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Onboarding Video Modal */}
+          {showOnboardingVideo && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+              <div className="bg-[#0f172a] rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col border border-white/10 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center">
+                      <PlayIcon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">
+                        製品デモ動画
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Medical Scribe Flow の使い方
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowOnboardingVideo(false);
+                      setShowHelp(true);
+                    }}
+                    className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
+                    aria-label="動画を閉じる"
+                  >
+                    <XMarkIcon className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Video Player Area */}
+                <div className="relative aspect-video bg-black">
+                  <video
+                    src="/video.mp4"
+                    className="w-full h-full"
+                    controls
+                    onEnded={() => {
+                      setShowOnboardingVideo(false);
+                      setShowHelp(true);
+                    }}
+                  />
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 bg-white/5 flex justify-between items-center">
+                  <p className="text-xs text-slate-500">
+                    ※ 音声が流れますのでご注意ください
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowOnboardingVideo(false);
+                      setShowHelp(true);
+                    }}
+                    className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg shadow-teal-900/20"
+                  >
+                    はじめる
                   </button>
                 </div>
               </div>
