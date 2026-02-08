@@ -27,7 +27,7 @@
 
 ### 開発期間
 
-2-3時間で実装可能なMVP（Minimum Viable Product）として設計されています。
+基盤2-3時間、UIUXの設計反映は2-3日で実装可能なMVP（Minimum Viable Product）として設計されています。
 
 ## 主要機能
 
